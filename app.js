@@ -7,15 +7,12 @@
 
 'use strict';
 
+const APP_VER = '2.1';
+
 /* ---------------------------------------------------------------------
    Almacenamiento local
    --------------------------------------------------------------------- */
-const K = {
-  cfg:   'cm.cfg',
-  cat:   'cm.catalogo',
-  insp:  'cm.inspecciones',
-  sync:  'cm.ultimaSync'
-};
+const K = { cfg: 'cm.cfg', cat: 'cm.catalogo', insp: 'cm.inspecciones', sync: 'cm.ultimaSync' };
 
 function load(k, def) {
   try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; }
@@ -23,14 +20,12 @@ function load(k, def) {
 }
 function save(k, v) {
   try { localStorage.setItem(k, JSON.stringify(v)); return true; }
-  catch (e) { toast('No hay espacio en el teléfono. Sincronizá para liberar.'); return false; }
+  catch (e) { toast('No entra más en el teléfono. Sincronizá para liberar espacio.'); return false; }
 }
 
 let cfg  = load(K.cfg, { url: '', token: '', supId: '', supNom: '', disp: '' });
 let cat  = load(K.cat, null);
 let insp = load(K.insp, []);
-
-if (!cfg.disp) { cfg.disp = 'D-' + uuid().slice(0, 8).toUpperCase(); save(K.cfg, cfg); }
 
 function uuid() {
   if (crypto.randomUUID) return crypto.randomUUID();
@@ -39,6 +34,7 @@ function uuid() {
     return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
   });
 }
+if (!cfg.disp) { cfg.disp = 'D-' + uuid().slice(0, 8).toUpperCase(); save(K.cfg, cfg); }
 
 /* ---------------------------------------------------------------------
    Reglas de negocio
@@ -72,6 +68,8 @@ const $$ = s => Array.from(document.querySelectorAll(s));
 const esc = s => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+function vibrar(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
+
 let toastT;
 function toast(msg) {
   const t = $('#toast');
@@ -81,30 +79,71 @@ function toast(msg) {
   toastT = setTimeout(() => t.classList.remove('on'), 3200);
 }
 
+/* El teclado del celular tapa la barra de acciones si no la escondemos. */
+if (window.visualViewport) {
+  const vv = window.visualViewport;
+  const ajustar = () => {
+    const tapado = window.innerHeight - vv.height - vv.offsetTop;
+    document.body.classList.toggle('kb', tapado > 130);
+  };
+  vv.addEventListener('resize', ajustar);
+  vv.addEventListener('scroll', ajustar);
+}
+
+/* Que la pantalla no se apague mientras se carga una inspección. */
+let wake = null;
+async function mantenerDespierto(activar) {
+  try {
+    if (activar && 'wakeLock' in navigator) { if (!wake) wake = await navigator.wakeLock.request('screen'); }
+    else if (wake) { await wake.release(); wake = null; }
+  } catch (e) { wake = null; }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && pantalla === 'form') mantenerDespierto(true);
+});
+
+/* ---------------------------------------------------------------------
+   Navegación
+   --------------------------------------------------------------------- */
 const historia = [];
 let pantalla = 'inicio';
 
-function ir(nombre, titulo, opts) {
+const TITULOS = { inicio: 'Control Mant', nueva: 'Nueva inspección', lista: 'Mis inspecciones',
+                  tablero: 'Tablero', ajustes: 'Ajustes', form: 'Inspección' };
+
+function ir(nombre, sub, opts) {
   opts = opts || {};
   if (!opts.atras) historia.push(pantalla);
   pantalla = nombre;
   $$('.screen').forEach(s => s.classList.remove('on'));
   $('#sc-' + nombre).classList.add('on');
-  $('#ttl').textContent = titulo || 'Control Mant';
+  $('#ttl').textContent = TITULOS[nombre] || 'Control Mant';
+  const s = $('#sub');
+  s.hidden = !sub; s.textContent = sub || '';
   $('#btnBack').hidden = (nombre === 'inicio');
   window.scrollTo(0, 0);
   pintarBarra();
+  mantenerDespierto(nombre === 'form');
 }
 
 function volver() {
+  if ($('#sheet').classList.contains('on')) return cerrarBuscador();
   const prev = historia.pop() || 'inicio';
-  const tit = { inicio: 'Control Mant', nueva: 'Nueva inspección', lista: 'Mis inspecciones',
-                tablero: 'Tablero', ajustes: 'Ajustes', form: 'Inspección' }[prev];
-  ir(prev, tit, { atras: true });
+  ir(prev, null, { atras: true });
   if (prev === 'inicio')  pintarInicio();
   if (prev === 'lista')   pintarLista();
   if (prev === 'tablero') pintarTablero();
+  if (prev === 'form' && borrador) ir('form', borrador.local, { atras: true });
 }
+
+/* El botón físico de "atrás" de Android debe volver de pantalla,
+   no cerrar la aplicación. */
+history.replaceState({ cm: 0 }, '');
+window.addEventListener('popstate', () => {
+  history.pushState({ cm: 1 }, '');
+  if (pantalla !== 'inicio' || $('#sheet').classList.contains('on')) volver();
+});
+history.pushState({ cm: 1 }, '');
 
 function pintarBarra() {
   const bar = $('#bar');
@@ -116,7 +155,7 @@ function pintarBarra() {
 }
 
 /* ---------------------------------------------------------------------
-   Estado general (conexión y pendientes)
+   Estado general
    --------------------------------------------------------------------- */
 function pendientes() { return insp.filter(i => i.estado === 'PENDIENTE'); }
 
@@ -139,8 +178,8 @@ function pintarInicio() {
   const bor = insp.filter(i => i.estado === 'BORRADOR').length;
   const pen = pendientes().length;
   const syn = insp.filter(i => i.estado === 'SINCRONIZADA').length;
-  $('#mLista').textContent =
-    insp.length === 0 ? 'Todavía no cargaste ninguna'
+  $('#mLista').textContent = insp.length === 0
+    ? 'Todavía no cargaste ninguna'
     : `${bor} en borrador · ${pen} por enviar · ${syn} enviadas`;
 
   const u = load(K.sync, null);
@@ -154,60 +193,64 @@ function pintarInicio() {
    PANTALLA · Nueva inspección
    ===================================================================== */
 let borrador = null;
+let localElegido = null;
 
 function abrirNueva() {
   if (!cat) { toast('Primero descargá los catálogos en Ajustes.'); return abrirAjustes(); }
 
   $('#fFecha').value = new Date().toISOString().slice(0, 10);
-
   $('#fSup').innerHTML = cat.supervisores
-    .map(s => `<option value="${esc(s.id)}"${s.id === cfg.supId ? ' selected' : ''}>${esc(s.nombre)}</option>`)
-    .join('');
-
+    .map(s => `<option value="${esc(s.id)}"${s.id === cfg.supId ? ' selected' : ''}>${esc(s.nombre)}</option>`).join('');
   $('#fRubro').innerHTML = '<option value="">Elegí un rubro…</option>' +
     cat.rubros.map(r => `<option value="${esc(r.rubro)}">${esc(r.rubro)}</option>`).join('');
 
-  $('#fLocal').value = '';
-  $('#fLocalList').hidden = true;
   localElegido = null;
+  const t = $('#fLocalTxt');
+  t.textContent = 'Buscar local…';
+  t.classList.remove('set');
 
-  ir('nueva', 'Nueva inspección');
+  ir('nueva');
 }
 
-let localElegido = null;
-
-$('#fLocal').addEventListener('input', function () {
-  const q = this.value.trim().toLowerCase();
-  const box = $('#fLocalList');
-  localElegido = null;
-  if (q.length < 1) { box.hidden = true; return; }
-  const r = cat.locales
-    .filter(l => l.nombre.toLowerCase().includes(q))
-    .slice(0, 40);
-  if (!r.length) {
-    box.innerHTML = '<button type="button" disabled style="color:#7A8B96">Sin resultados</button>';
-  } else {
-    box.innerHTML = r.map(l =>
-      `<button type="button" data-n="${esc(l.nombre)}" data-f="${esc(l.formato)}">
-         ${esc(l.nombre)}<div class="fmt">${esc(l.formato)}</div></button>`).join('');
-  }
-  box.hidden = false;
-});
-
-$('#fLocalList').addEventListener('click', e => {
+/* ---- Buscador de locales a pantalla completa ---- */
+function abrirBuscador() {
+  if (!cat) return toast('Descargá los catálogos primero.');
+  $('#sheet').classList.add('on');
+  $('#shInput').value = '';
+  listarLocales('');
+  setTimeout(() => $('#shInput').focus(), 120);
+}
+function cerrarBuscador() {
+  $('#sheet').classList.remove('on');
+  $('#shInput').blur();
+}
+function normaliza(s) {
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+function listarLocales(q) {
+  const n = normaliza(q.trim());
+  const r = (n ? cat.locales.filter(l => normaliza(l.nombre).includes(n)) : cat.locales).slice(0, 80);
+  $('#shList').innerHTML = r.length
+    ? r.map(l => `<button type="button" data-n="${esc(l.nombre)}" data-f="${esc(l.formato)}">
+                    <div class="fmt">${esc(l.formato)}</div>${esc(l.nombre)}</button>`).join('')
+    : '<p class="tiny" style="text-align:center;padding:26px">Ningún local coincide.</p>';
+}
+$('#fLocalBtn').onclick = abrirBuscador;
+$('#shClose').onclick = cerrarBuscador;
+$('#shInput').addEventListener('input', function () { listarLocales(this.value); });
+$('#shList').addEventListener('click', e => {
   const b = e.target.closest('button[data-n]');
   if (!b) return;
   localElegido = { nombre: b.dataset.n, formato: b.dataset.f };
-  $('#fLocal').value = b.dataset.n;
-  $('#fLocalList').hidden = true;
-});
-
-document.addEventListener('click', e => {
-  if (!e.target.closest('.pick')) $('#fLocalList').hidden = true;
+  const t = $('#fLocalTxt');
+  t.textContent = b.dataset.n;
+  t.classList.add('set');
+  cerrarBuscador();
+  vibrar(8);
 });
 
 function comenzarInspeccion() {
-  if (!localElegido) return toast('Elegí un local de la lista.');
+  if (!localElegido) { toast('Elegí un local.'); return abrirBuscador(); }
   const rubro = $('#fRubro').value;
   if (!rubro) return toast('Elegí un rubro.');
 
@@ -215,11 +258,10 @@ function comenzarInspeccion() {
   cfg.supId = sup.id || ''; cfg.supNom = sup.nombre || ''; save(K.cfg, cfg);
 
   const def = cat.rubros.find(r => r.rubro === rubro);
-  const eqs = cat.equipos.filter(e => e.rubro === rubro);
+  const eqs = cat.equipos.filter(e => e.rubro === rubro)
+    .sort((a, b) => (a.orden_sector - b.orden_sector) || (a.orden_equipo - b.orden_equipo));
 
-  const sectores = [];
-  const vistos = {};
-  eqs.sort((a, b) => (a.orden_sector - b.orden_sector) || (a.orden_equipo - b.orden_equipo));
+  const sectores = [], vistos = {};
   eqs.forEach(e => {
     if (!vistos[e.sector]) {
       vistos[e.sector] = { uuid: uuid(), sector: e.sector, puntaje: null,
@@ -234,18 +276,11 @@ function comenzarInspeccion() {
   });
 
   borrador = {
-    uuid: uuid(),
-    fecha: $('#fFecha').value,
-    local: localElegido.nombre,
-    formato: localElegido.formato,
-    rubro: rubro,
-    supervisor_id: sup.id || '',
-    supervisor: sup.nombre || '',
-    observacion: '',
-    creado_en: new Date().toISOString(),
-    estado: 'BORRADOR',
-    def: def,
-    sectores: sectores
+    uuid: uuid(), fecha: $('#fFecha').value,
+    local: localElegido.nombre, formato: localElegido.formato, rubro: rubro,
+    supervisor_id: sup.id || '', supervisor: sup.nombre || '',
+    observacion: '', creado_en: new Date().toISOString(),
+    estado: 'BORRADOR', def: def, sectores: sectores
   };
   insp.unshift(borrador);
   save(K.insp, insp);
@@ -258,11 +293,10 @@ function comenzarInspeccion() {
 function abrirFormulario(rec) {
   borrador = rec;
   if (!borrador.def) borrador.def = (cat && cat.rubros.find(r => r.rubro === rec.rubro)) || {};
-  $('#fHeadEye').textContent = rec.rubro + ' · ' + rec.fecha;
-  $('#fHeadLocal').textContent = rec.local;
   $('#fObs').value = rec.observacion || '';
   dibujarSectores();
-  ir('form', 'Inspección');
+  ir('form', rec.local + ' · ' + rec.rubro);
+  actualizarProgreso();
 }
 
 $('#fObs').addEventListener('input', function () {
@@ -280,31 +314,63 @@ function selectorPuntaje(valor, onSet) {
   d.className = 'grade';
   d.innerHTML = [0, 1, 2, 3].map(v =>
     `<button type="button" data-v="${v}" class="${valor === v ? 'sel' : ''}">
-       <span class="chip"></span><span class="n">${v} · ${SEM_NOM[v].toUpperCase()}</span>
+       <span class="chip">${v}</span><span class="n">${SEM_NOM[v]}</span>
      </button>`).join('');
   d.addEventListener('click', e => {
     const b = e.target.closest('button[data-v]');
     if (!b) return;
-    const v = Number(b.dataset.v);
     d.querySelectorAll('button').forEach(x => x.classList.toggle('sel', x === b));
-    onSet(v);
+    vibrar(12);
+    onSet(Number(b.dataset.v));
   });
   return d;
+}
+
+/** Campo numérico con − y +, para no tener que abrir el teclado. */
+function contador(valor, onSet) {
+  const w = document.createElement('div');
+  w.className = 'step';
+
+  const menos = document.createElement('button');
+  menos.type = 'button'; menos.textContent = '−'; menos.setAttribute('aria-label', 'Restar');
+  const mas = document.createElement('button');
+  mas.type = 'button'; mas.textContent = '+'; mas.setAttribute('aria-label', 'Sumar');
+  const i = document.createElement('input');
+  i.type = 'number'; i.min = '0'; i.inputMode = 'numeric'; i.placeholder = '0';
+  i.value = valor;
+
+  function fijar(v, avisar) {
+    i.value = (v === null || v === '') ? '' : v;
+    onSet(i.value);
+    if (avisar) vibrar(6);
+  }
+  menos.onclick = () => {
+    const n = Math.max(0, (Number(i.value) || 0) - 1);
+    fijar(n, true);
+  };
+  mas.onclick = () => fijar((Number(i.value) || 0) + 1, true);
+  i.addEventListener('input', () => {
+    let n = i.value === '' ? '' : Math.max(0, Math.floor(Number(i.value) || 0));
+    if (String(n) !== i.value) i.value = n;
+    onSet(i.value);
+  });
+
+  w.append(menos, i, mas);
+  w.fijar = fijar;
+  w.input = i;
+  return w;
 }
 
 function medidor(op) {
   const s = semaforoDeOperatividad(op);
   const d = document.createElement('div');
   d.className = 'gauge';
-  if (op === null) {
-    d.innerHTML = `<div class="row"><span class="tiny">Operatividad</span>
-      <span class="val" style="color:#7A8B96">sin datos</span></div>
-      <div class="track"></div>`;
-  } else {
-    d.innerHTML = `<div class="row"><span class="tiny">Operatividad</span>
-      <span class="val num c${s}">${Math.round(op * 100)}%</span></div>
-      <div class="track"><div class="fill f${s}" style="width:${Math.round(op * 100)}%"></div></div>`;
-  }
+  d.innerHTML = op === null
+    ? `<div class="row"><span class="tiny">Operatividad</span>
+       <span class="val" style="color:#7A8B96;font-size:15px">sin datos</span></div><div class="track"></div>`
+    : `<div class="row"><span class="tiny">Operatividad</span>
+       <span class="val num c${s}">${Math.round(op * 100)}%</span></div>
+       <div class="track"><div class="fill f${s}" style="width:${Math.round(op * 100)}%"></div></div>`;
   return d;
 }
 
@@ -313,14 +379,21 @@ function dibujarSectores() {
   cont.innerHTML = '';
   const def = borrador.def || {};
 
-  borrador.sectores.forEach(sec => {
+  borrador.sectores.forEach((sec, idx) => {
     const det = document.createElement('details');
     det.className = 'sector';
-    det.open = false;
+    det.open = (idx === 0);          // el primero abierto: un toque menos
 
     const sum = document.createElement('summary');
     sum.innerHTML = `<span class="sq"></span><span class="nm">${esc(sec.sector)}</span><span class="st"></span>`;
     det.appendChild(sum);
+
+    // Solo un sector abierto por vez, y que quede a la vista.
+    det.addEventListener('toggle', () => {
+      if (!det.open) return;
+      cont.querySelectorAll('details[open]').forEach(o => { if (o !== det) o.open = false; });
+      setTimeout(() => det.scrollIntoView({ block: 'start', behavior: 'smooth' }), 60);
+    });
 
     const body = document.createElement('div');
     body.className = 'body';
@@ -329,11 +402,10 @@ function dibujarSectores() {
     /* --- metros cuadrados --- */
     if (def.usa_m2) {
       const l = document.createElement('label');
-      l.className = 'f';
-      l.style.marginTop = '14px';
+      l.className = 'f'; l.style.marginTop = '14px';
       l.innerHTML = '<span>Metros cuadrados</span>';
       const i = document.createElement('input');
-      i.type = 'number'; i.min = '0'; i.step = '0.01';
+      i.type = 'number'; i.min = '0'; i.step = '0.01'; i.inputMode = 'decimal';
       i.value = sec.metros_cuadrados; i.placeholder = '0';
       i.addEventListener('input', () => {
         if (Number(i.value) < 0) i.value = '';
@@ -348,14 +420,12 @@ function dibujarSectores() {
       const box = document.createElement('div');
       box.className = 'eq';
       const t = document.createElement('div');
-      t.className = 'en';
-      t.textContent = eq.equipo;
+      t.className = 'en'; t.textContent = eq.equipo;
       box.appendChild(t);
 
       if (eq.pide_texto) {
         const i = document.createElement('input');
-        i.type = 'text'; i.value = eq.texto;
-        i.placeholder = 'Escribí el dato';
+        i.type = 'text'; i.value = eq.texto; i.placeholder = 'Escribí el dato';
         i.addEventListener('input', () => { eq.texto = i.value; guardarBorrador(); });
         box.appendChild(i);
       }
@@ -363,75 +433,63 @@ function dibujarSectores() {
       if (eq.pide_cantidades) {
         const g = document.createElement('div');
         g.className = 'qty';
-        g.innerHTML = `<label class="f" style="margin:0"><span>Total</span></label>
-                       <label class="f" style="margin:0"><span>No operativos</span></label>`;
-        const iT = document.createElement('input');
-        const iN = document.createElement('input');
-        [iT, iN].forEach(i => { i.type = 'number'; i.min = '0'; i.inputMode = 'numeric'; i.placeholder = '0'; });
-        iT.value = eq.total; iN.value = eq.no_operativos;
+        const lT = document.createElement('label');
+        lT.innerHTML = '<span class="flabel">Total</span>';
+        const lN = document.createElement('label');
+        lN.innerHTML = '<span class="flabel">No operativos</span>';
 
         const aviso = document.createElement('div');
-        aviso.className = 'warn';
-        aviso.hidden = true;
+        aviso.className = 'warn'; aviso.hidden = true;
 
+        let cT, cN;
         function revisar() {
-          const T = iT.value === '' ? null : Math.max(0, Math.floor(Number(iT.value) || 0));
-          let   N = iN.value === '' ? null : Math.max(0, Math.floor(Number(iN.value) || 0));
+          const T = cT.input.value === '' ? null : Number(cT.input.value);
+          let   N = cN.input.value === '' ? null : Number(cN.input.value);
           if (T !== null && N !== null && N > T) {
-            N = T; iN.value = T;
+            N = T; cN.input.value = T;
             aviso.hidden = false;
             aviso.textContent = 'No puede haber más equipos rotos que equipos totales. Lo ajusté al total.';
-          } else {
-            aviso.hidden = true;
-          }
-          if (iT.value !== '' && T !== null) iT.value = T;
+          } else { aviso.hidden = true; }
           eq.total = T === null ? '' : T;
           eq.no_operativos = N === null ? '' : N;
           guardarBorrador();
           refrescarSector(sec, det);
+          actualizarProgreso();
         }
-        iT.addEventListener('input', revisar);
-        iN.addEventListener('input', revisar);
-
-        g.children[0].appendChild(iT);
-        g.children[1].appendChild(iN);
-        box.appendChild(g);
-        box.appendChild(aviso);
+        cT = contador(eq.total, revisar);
+        cN = contador(eq.no_operativos, revisar);
+        lT.appendChild(cT); lN.appendChild(cN);
+        g.append(lT, lN);
+        box.append(g, aviso);
       }
 
       if (eq.pide_puntaje && def.nivel_puntaje === 'EQUIPO') {
         box.appendChild(selectorPuntaje(eq.puntaje, v => {
-          eq.puntaje = v; guardarBorrador(); refrescarSector(sec, det);
+          eq.puntaje = v; guardarBorrador(); refrescarSector(sec, det); actualizarProgreso();
         }));
       }
 
       body.appendChild(box);
     });
 
-    /* --- operatividad del sector --- */
     if (def.usa_operatividad) {
       const m = document.createElement('div');
       m.dataset.rol = 'medidor';
       body.appendChild(m);
     }
 
-    /* --- puntaje del sector --- */
     if (def.nivel_puntaje === 'SECTOR') {
       const l = document.createElement('label');
-      l.className = 'f';
-      l.style.marginTop = '16px';
+      l.className = 'f'; l.style.marginTop = '16px';
       l.innerHTML = '<span>Calificación del sector</span>';
       l.appendChild(selectorPuntaje(sec.puntaje, v => {
-        sec.puntaje = v; guardarBorrador(); refrescarSector(sec, det);
+        sec.puntaje = v; guardarBorrador(); refrescarSector(sec, det); actualizarProgreso();
       }));
       body.appendChild(l);
     }
 
-    /* --- observación --- */
     const lo = document.createElement('label');
-    lo.className = 'f';
-    lo.style.marginTop = '14px';
-    lo.style.marginBottom = '0';
+    lo.className = 'f'; lo.style.marginTop = '14px'; lo.style.marginBottom = '0';
     lo.innerHTML = '<span>Observaciones</span>';
     const ta = document.createElement('textarea');
     ta.value = sec.observacion;
@@ -439,6 +497,19 @@ function dibujarSectores() {
     ta.addEventListener('input', () => { sec.observacion = ta.value; guardarBorrador(); });
     lo.appendChild(ta);
     body.appendChild(lo);
+
+    /* --- pasar al siguiente sector sin buscarlo --- */
+    if (idx < borrador.sectores.length - 1) {
+      const n = document.createElement('button');
+      n.type = 'button'; n.className = 'next';
+      n.textContent = 'Siguiente: ' + borrador.sectores[idx + 1].sector + '  ›';
+      n.onclick = () => {
+        const sig = cont.children[idx + 1];
+        det.open = false;
+        sig.open = true;
+      };
+      body.appendChild(n);
+    }
 
     cont.appendChild(det);
     refrescarSector(sec, det);
@@ -448,11 +519,8 @@ function dibujarSectores() {
 function totalesSector(sec) {
   let t = 0, n = 0, hay = false;
   sec.equipos.forEach(e => {
-    if (!e.pide_cantidades) return;
-    if (e.total === '' || e.total === null) return;
-    hay = true;
-    t += Number(e.total) || 0;
-    n += Number(e.no_operativos) || 0;
+    if (!e.pide_cantidades || e.total === '' || e.total === null) return;
+    hay = true; t += Number(e.total) || 0; n += Number(e.no_operativos) || 0;
   });
   return hay ? { total: t, noop: n, op: operatividad(t, n) } : { total: null, noop: null, op: null };
 }
@@ -472,43 +540,45 @@ function refrescarSector(sec, det) {
   if (m) { m.innerHTML = ''; m.appendChild(medidor(tot.op)); }
 
   const s = semaforoSector(sec, def);
-  const sq = det.querySelector('.sq');
-  sq.style.background = (s === null || s === undefined) ? '#DFE6EA' : SEM_HEX[s];
+  det.querySelector('.sq').style.background =
+    (s === null || s === undefined) ? '#DFE6EA' : SEM_HEX[s];
 
-  const st = det.querySelector('.st');
   const partes = [];
   if (tot.op !== null) partes.push(Math.round(tot.op * 100) + '%');
   if (s !== null && s !== undefined) partes.push(SEM_NOM[s]);
-  st.textContent = partes.join(' · ') || 'sin cargar';
+  det.querySelector('.st').textContent = partes.join(' · ') || 'sin cargar';
+}
+
+/** Cuántos sectores están completos, visible en el encabezado. */
+function sectorCompleto(sec, def) {
+  if (def.nivel_puntaje === 'SECTOR') return sec.puntaje !== null;
+  return sec.equipos.filter(e => e.pide_puntaje).every(e => e.puntaje !== null);
+}
+function actualizarProgreso() {
+  if (!borrador) return;
+  const def = borrador.def || {};
+  const n = borrador.sectores.filter(s => sectorCompleto(s, def)).length;
+  const s = $('#sub');
+  s.hidden = false;
+  s.textContent = `${borrador.local} · ${n}/${borrador.sectores.length} sectores`;
 }
 
 function faltantes() {
   const def = borrador.def || {};
-  const f = [];
-  borrador.sectores.forEach(sec => {
-    if (def.nivel_puntaje === 'SECTOR' && sec.puntaje === null) f.push(sec.sector);
-    if (def.nivel_puntaje === 'EQUIPO') {
-      const sin = sec.equipos.filter(e => e.pide_puntaje && e.puntaje === null);
-      if (sin.length) f.push(sec.sector);
-    }
-  });
-  return f;
+  return borrador.sectores.filter(s => !sectorCompleto(s, def)).map(s => s.sector);
 }
 
 function cerrarInspeccion() {
   const f = faltantes();
-  if (f.length) {
-    const ok = confirm('Falta calificar: ' + f.join(', ') +
-      '.\n\n¿Querés cerrarla igual? Se enviará incompleta.');
-    if (!ok) return;
-  }
+  if (f.length && !confirm('Falta calificar: ' + f.join(', ') +
+      '.\n\n¿La cerrás igual? Se va a enviar incompleta.')) return;
   borrador.estado = 'PENDIENTE';
   borrador.cerrado_en = new Date().toISOString();
   save(K.insp, insp);
-  toast('Inspección guardada. Se enviará cuando haya conexión.');
-  pintarEstado();
+  vibrar(20);
+  toast('Inspección guardada. Se envía cuando haya conexión.');
   historia.length = 0;
-  ir('inicio', 'Control Mant', { atras: true });
+  ir('inicio', null, { atras: true });
   pintarInicio();
   if (navigator.onLine) sincronizar(true);
 }
@@ -517,7 +587,7 @@ function cerrarInspeccion() {
    PANTALLA · Mis inspecciones
    ===================================================================== */
 const TAGS = { BORRADOR: ['bor', 'Borrador'], PENDIENTE: ['pen', 'Por enviar'],
-               SINCRONIZADA: ['syn', 'Enviada'], ERROR: ['err', 'Error'] };
+               SINCRONIZADA: ['syn', 'Enviada'] };
 
 function pintarLista() {
   const box = $('#listaBox');
@@ -531,7 +601,7 @@ function pintarLista() {
     return `<div class="item">
       <div class="m"><b>${esc(i.local)}</b>
       <span>${esc(i.rubro)} · ${esc(i.fecha)}${i.error ? ' · ' + esc(i.error) : ''}</span></div>
-      <span class="tag ${t[0]}">${t[1]}</span>
+      <span class="tag ${i.error ? 'err' : t[0]}">${i.error ? 'Error' : t[1]}</span>
       ${i.estado === 'BORRADOR' ? `<button class="btn sm ghost" data-abrir="${k}">Seguir</button>` : ''}
     </div>`;
   }).join('');
@@ -555,8 +625,7 @@ function pintarTablero() {
 
   const locales = new Set(datos.map(d => d.local));
   let rojos = 0;
-  const porRubro = {};
-  const porLocal = {};
+  const porRubro = {}, porLocal = {};
 
   datos.forEach(d => {
     const def = (cat && cat.rubros.find(r => r.rubro === d.rubro)) || d.def || {};
@@ -565,17 +634,15 @@ function pintarTablero() {
       if (s === null || s === undefined) return;
       if (s === 0) rojos++;
       (porRubro[d.rubro] = porRubro[d.rubro] || [0, 0, 0, 0])[s]++;
-      (porLocal[d.local] = porLocal[d.local] || { c: 0, sum: 0 });
-      porLocal[d.local].c++;
-      porLocal[d.local].sum += s;
+      porLocal[d.local] = porLocal[d.local] || { c: 0, sum: 0 };
+      porLocal[d.local].c++; porLocal[d.local].sum += s;
     });
   });
 
   const barras = obj => Object.keys(obj).sort().map(k => {
     const v = obj[k], tot = v.reduce((a, b) => a + b, 0) || 1;
     const segs = v.map((n, i) => n ? `<i class="f${i}" style="width:${n / tot * 100}%"></i>` : '').join('');
-    return `<div class="brow"><span>${esc(k)}</span><span class="bt">${segs}</span>
-            <span class="bv">${tot}</span></div>`;
+    return `<div class="brow"><span>${esc(k)}</span><span class="bt">${segs}</span><span class="bv">${tot}</span></div>`;
   }).join('');
 
   const peores = Object.keys(porLocal)
@@ -588,28 +655,22 @@ function pintarTablero() {
       <div class="kpi"><b class="num">${locales.size}</b><span>Locales</span></div>
       <div class="kpi"><b class="num c0">${rojos}</b><span>Alertas rojas</span></div>
     </div>
-
     <div class="card">
       <div class="eyebrow">Estado por rubro</div>
       <div class="bars">${barras(porRubro)}</div>
-      <div class="legend">
-        ${SEM_NOM.map((n, i) => `<span><i style="background:${SEM_HEX[i]}"></i>${n}</span>`).join('')}
-      </div>
+      <div class="legend">${SEM_NOM.map((n, i) =>
+        `<span><i style="background:${SEM_HEX[i]}"></i>${n}</span>`).join('')}</div>
     </div>
-
     <div class="card">
       <div class="eyebrow">Locales que peor están</div>
-      <div class="bars">
-        ${peores.map(p => {
-          const s = Math.round(p.prom);
-          return `<div class="brow"><span>${esc(p.local)}</span>
-            <span class="bt"><i class="f${s}" style="width:${(p.prom / 3) * 100}%"></i></span>
-            <span class="bv num">${p.prom.toFixed(1)}</span></div>`;
-        }).join('')}
-      </div>
+      <div class="bars">${peores.map(p => {
+        const s = Math.round(p.prom);
+        return `<div class="brow"><span>${esc(p.local)}</span>
+          <span class="bt"><i class="f${s}" style="width:${(p.prom / 3) * 100}%"></i></span>
+          <span class="bv num">${p.prom.toFixed(1)}</span></div>`;
+      }).join('')}</div>
       <p class="tiny" style="margin:11px 0 0">Promedio de calificación de sus sectores, de 0 a 3.</p>
     </div>
-
     <p class="tiny" style="text-align:center">Se arma con las inspecciones de este teléfono.
     Para el resumen de todos los supervisores, mirá la planilla.</p>`;
 }
@@ -622,7 +683,7 @@ function abrirAjustes() {
   $('#aTok').value = cfg.token || '';
   pintarSupAjustes();
   pintarCatAjustes();
-  ir('ajustes', 'Ajustes');
+  ir('ajustes', 'Versión ' + APP_VER + ' · ' + cfg.disp);
 }
 
 function pintarSupAjustes() {
@@ -630,8 +691,7 @@ function pintarSupAjustes() {
   if (!cat) { s.innerHTML = '<option>Descargá los catálogos primero</option>'; s.disabled = true; return; }
   s.disabled = false;
   s.innerHTML = cat.supervisores
-    .map(x => `<option value="${esc(x.id)}"${x.id === cfg.supId ? ' selected' : ''}>${esc(x.nombre)}</option>`)
-    .join('');
+    .map(x => `<option value="${esc(x.id)}"${x.id === cfg.supId ? ' selected' : ''}>${esc(x.nombre)}</option>`).join('');
   s.onchange = () => {
     const x = cat.supervisores.find(y => y.id === s.value);
     cfg.supId = x.id; cfg.supNom = x.nombre; save(K.cfg, cfg);
@@ -641,8 +701,7 @@ function pintarSupAjustes() {
 
 function pintarCatAjustes() {
   $('#aCat').textContent = cat
-    ? `${cat.locales.length} locales · ${cat.supervisores.length} supervisores · ` +
-      `${cat.rubros.length} rubros · ${cat.equipos.length} equipos`
+    ? `${cat.locales.length} locales · ${cat.supervisores.length} supervisores · ${cat.rubros.length} rubros · ${cat.equipos.length} equipos`
     : 'Sin descargar todavía.';
 }
 
@@ -653,9 +712,7 @@ $('#aProbar').onclick = async () => {
   if (!cfg.url || !cfg.token) return toast('Completá la dirección y la clave.');
   $('#aEstado').textContent = 'Conectando…';
   const r = await bajarCatalogos();
-  $('#aEstado').textContent = r.ok
-    ? '✔ Conectado. Catálogos actualizados.'
-    : '✕ ' + r.error;
+  $('#aEstado').textContent = r.ok ? '✔ Conectado. Catálogos actualizados.' : '✕ ' + r.error;
 };
 
 $('#aActualizar').onclick = async () => {
@@ -666,7 +723,7 @@ $('#aActualizar').onclick = async () => {
 $('#aBorrar').onclick = () => {
   const n = insp.filter(i => i.estado === 'SINCRONIZADA').length;
   if (!n) return toast('No hay inspecciones enviadas para borrar.');
-  if (!confirm(`Se van a borrar ${n} inspecciones de este teléfono.\nSiguen guardadas en la planilla. ¿Confirmás?`)) return;
+  if (!confirm(`Se borran ${n} inspecciones de este teléfono.\nSiguen guardadas en la planilla. ¿Confirmás?`)) return;
   insp = insp.filter(i => i.estado !== 'SINCRONIZADA');
   save(K.insp, insp);
   toast('Listo, se liberó espacio.');
@@ -678,10 +735,9 @@ $('#aBorrar').onclick = () => {
    ===================================================================== */
 
 /**
- * Se envía como texto plano a propósito: si mandáramos application/json
- * el navegador haría una consulta previa que Apps Script no sabe
- * responder, y todo fallaría por CORS. Apps Script recibe el contenido
- * igual y lo interpreta como JSON.
+ * Se envía como texto plano a propósito: con application/json el navegador
+ * hace una consulta previa que Apps Script no sabe responder y todo falla
+ * por CORS. Apps Script recibe el contenido igual y lo lee como JSON.
  */
 async function llamar(payload, ms) {
   const ctrl = new AbortController();
@@ -691,30 +747,22 @@ async function llamar(payload, ms) {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(Object.assign({ token: cfg.token }, payload)),
-      signal: ctrl.signal,
-      redirect: 'follow'
+      signal: ctrl.signal, redirect: 'follow'
     });
     const txt = await res.text();
     try { return JSON.parse(txt); }
-    catch (e) { return { ok: false, error: 'La respuesta no es válida. Revisá que la dirección termine en /exec.' }; }
+    catch (e) { return { ok: false, error: 'Respuesta inesperada. Revisá que la dirección termine en /exec.' }; }
   } catch (e) {
     return { ok: false, error: e.name === 'AbortError' ? 'Tardó demasiado.' : 'Sin conexión con la planilla.' };
-  } finally {
-    clearTimeout(t);
-  }
+  } finally { clearTimeout(t); }
 }
 
 async function bajarCatalogos() {
   if (!cfg.url || !cfg.token) return { ok: false, error: 'Falta configurar la conexión.' };
   const r = await llamar({ accion: 'catalogos' });
   if (!r.ok) return { ok: false, error: r.error || 'No se pudo descargar.' };
-  cat = {
-    version: r.catalogo_version,
-    locales: r.locales || [],
-    supervisores: r.supervisores || [],
-    rubros: r.rubros || [],
-    equipos: r.equipos || []
-  };
+  cat = { version: r.catalogo_version, locales: r.locales || [], supervisores: r.supervisores || [],
+          rubros: r.rubros || [], equipos: r.equipos || [] };
   save(K.cat, cat);
   pintarCatAjustes();
   pintarSupAjustes();
@@ -728,25 +776,20 @@ async function sincronizar(silencioso) {
   const cola = pendientes();
   if (!cola.length) { if (!silencioso) toast('No hay nada pendiente.'); return; }
   if (!cfg.url || !cfg.token) { if (!silencioso) toast('Configurá la conexión en Ajustes.'); return; }
-  if (!navigator.onLine) { if (!silencioso) toast('Sin conexión. Se enviará más tarde.'); return; }
+  if (!navigator.onLine) { if (!silencioso) toast('Sin conexión. Se envía más tarde.'); return; }
 
   sincronizando = true;
   if (!silencioso) toast('Enviando ' + cola.length + '…');
 
-  // De a poco: si algo falla, se pierde poco trabajo y se reintenta.
-  const lote = cola.slice(0, 5).map(paraEnviar);
+  const lote = cola.slice(0, 5);
   const r = await llamar({
-    dispositivo: cfg.disp,
-    app_version: '2.0',
-    supervisor: cfg.supNom,
-    inspecciones: lote
+    dispositivo: cfg.disp, app_version: APP_VER, supervisor: cfg.supNom,
+    inspecciones: lote.map(paraEnviar)
   }, 45000);
 
   if (r.ok) {
     const ok = new Set(r.uuids_confirmados || []);
-    insp.forEach(i => {
-      if (ok.has(i.uuid)) { i.estado = 'SINCRONIZADA'; delete i.error; }
-    });
+    insp.forEach(i => { if (ok.has(i.uuid)) { i.estado = 'SINCRONIZADA'; delete i.error; } });
     save(K.insp, insp);
     save(K.sync, Date.now());
     if (!silencioso || r.insertados) {
@@ -755,8 +798,8 @@ async function sincronizar(silencioso) {
     if (r.catalogo_version && cat && r.catalogo_version !== cat.version) await bajarCatalogos();
   } else {
     // Nada se marca como enviado: se reintenta entero. Es seguro porque
-    // la planilla descarta por UUID lo que ya recibió.
-    cola.slice(0, 5).forEach(i => { i.error = r.error; });
+    // la planilla descarta por identificador lo que ya recibió.
+    lote.forEach(i => { i.error = r.error; });
     save(K.insp, insp);
     if (!silencioso) toast(r.error);
   }
@@ -765,7 +808,6 @@ async function sincronizar(silencioso) {
   pintarEstado();
   pintarInicio();
   if (pantalla === 'lista') pintarLista();
-
   if (r.ok && pendientes().length) setTimeout(() => sincronizar(true), 1200);
 }
 
@@ -774,7 +816,7 @@ function paraEnviar(i) {
   const sectores = [], equipos = [];
 
   i.sectores.forEach(sec => {
-    const t = totalesSectorDe(sec);
+    const t = totalesSector(sec);
     sectores.push({
       uuid: sec.uuid, sector: sec.sector,
       puntaje: def.nivel_puntaje === 'SECTOR' ? sec.puntaje : null,
@@ -783,8 +825,7 @@ function paraEnviar(i) {
       observacion: sec.observacion
     });
     sec.equipos.forEach(e => {
-      const cargado = e.total !== '' || e.puntaje !== null || e.texto !== '' || e.observacion !== '';
-      if (!cargado) return;
+      if (e.total === '' && e.puntaje === null && !e.texto && !e.observacion) return;
       equipos.push({
         uuid: e.uuid, sector: sec.sector, equipo: e.equipo,
         total: e.total === '' ? null : Number(e.total),
@@ -800,15 +841,6 @@ function paraEnviar(i) {
     observacion: i.observacion, creado_en: i.creado_en,
     sectores: sectores, equipos: equipos
   };
-}
-
-function totalesSectorDe(sec) {
-  let t = 0, n = 0, hay = false;
-  sec.equipos.forEach(e => {
-    if (!e.pide_cantidades || e.total === '' || e.total === null) return;
-    hay = true; t += Number(e.total) || 0; n += Number(e.no_operativos) || 0;
-  });
-  return hay ? { total: t, noop: n } : { total: null, noop: null };
 }
 
 /* =====================================================================
@@ -831,7 +863,7 @@ const BARRAS = {
         save(K.insp, insp);
         toast('Guardada como borrador.');
         historia.length = 0;
-        ir('inicio', 'Control Mant', { atras: true });
+        ir('inicio', null, { atras: true });
         pintarInicio();
       };
       $('[data-a="cerrar"]').onclick = cerrarInspeccion;
@@ -847,14 +879,14 @@ const BARRAS = {
    Arranque
    ===================================================================== */
 $('#btnBack').onclick = volver;
-$('#pend').onclick = () => { ir('lista', 'Mis inspecciones'); pintarLista(); };
+$('#pend').onclick = () => { ir('lista'); pintarLista(); };
 
 $$('.menu button[data-go]').forEach(b => {
   b.onclick = () => {
     const d = b.dataset.go;
     if (d === 'nueva')   return abrirNueva();
-    if (d === 'lista')   { ir('lista', 'Mis inspecciones'); return pintarLista(); }
-    if (d === 'tablero') { ir('tablero', 'Tablero'); return pintarTablero(); }
+    if (d === 'lista')   { ir('lista'); return pintarLista(); }
+    if (d === 'tablero') { ir('tablero'); return pintarTablero(); }
     if (d === 'ajustes') return abrirAjustes();
   };
 });

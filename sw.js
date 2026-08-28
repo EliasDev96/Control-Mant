@@ -2,7 +2,7 @@
    Guarda la app en el teléfono para que abra sin conexión.
    Los datos de la planilla NUNCA se cachean: siempre van a la red. */
 
-const CACHE = 'control-mant-v2.0.0';
+const CACHE = 'control-mant-v2.1.0';
 const ARCHIVOS = [
   './',
   './index.html',
