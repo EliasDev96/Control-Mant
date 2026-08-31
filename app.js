@@ -7,7 +7,7 @@
 
 'use strict';
 
-const APP_VER = '2.1';
+const APP_VER = '2.2';
 
 /* ---------------------------------------------------------------------
    Almacenamiento local
@@ -390,8 +390,9 @@ function dibujarSectores() {
 
     // Solo un sector abierto por vez, y que quede a la vista.
     det.addEventListener('toggle', () => {
-      if (!det.open) return;
+      if (!det.open) { actualizarProgreso(); return; }
       cont.querySelectorAll('details[open]').forEach(o => { if (o !== det) o.open = false; });
+      actualizarProgreso();
       setTimeout(() => det.scrollIntoView({ block: 'start', behavior: 'smooth' }), 60);
     });
 
@@ -558,9 +559,16 @@ function actualizarProgreso() {
   if (!borrador) return;
   const def = borrador.def || {};
   const n = borrador.sectores.filter(s => sectorCompleto(s, def)).length;
+
+  // El sector abierto se muestra acá arriba en vez de fijarlo sobre el
+  // formulario: así no tapa el primer equipo de la lista.
+  const ab = document.querySelector('#fSectores details[open] .nm');
+  const donde = ab ? ab.textContent : null;
+
   const s = $('#sub');
   s.hidden = false;
-  s.textContent = `${borrador.local} · ${n}/${borrador.sectores.length} sectores`;
+  s.textContent = (donde ? donde + ' · ' : '') +
+                  `${n}/${borrador.sectores.length} sectores · ${borrador.local}`;
 }
 
 function faltantes() {
