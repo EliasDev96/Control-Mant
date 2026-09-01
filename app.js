@@ -7,12 +7,13 @@
 
 'use strict';
 
-const APP_VER = '2.2';
+const APP_VER = '2.3';
 
 /* ---------------------------------------------------------------------
    Almacenamiento local
    --------------------------------------------------------------------- */
-const K = { cfg: 'cm.cfg', cat: 'cm.catalogo', insp: 'cm.inspecciones', sync: 'cm.ultimaSync' };
+const K = { cfg: 'cm.cfg', cat: 'cm.catalogo', insp: 'cm.inspecciones',
+            sync: 'cm.ultimaSync', res: 'cm.resumen' };
 
 function load(k, def) {
   try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; }
@@ -195,14 +196,35 @@ function pintarInicio() {
 let borrador = null;
 let localElegido = null;
 
+/**
+ * Cada supervisor ve solo los rubros que le tocan, según la columna
+ * "rubros" de la planilla. Vacía significa que los ve todos.
+ */
+function rubrosDe(supId) {
+  const s = cat.supervisores.find(x => x.id === supId);
+  const suyos = (s && s.rubros) || [];
+  if (!suyos.length) return cat.rubros;
+  const permitidos = cat.rubros.filter(r => suyos.indexOf(r.rubro) >= 0);
+  return permitidos.length ? permitidos : cat.rubros;
+}
+
+function pintarRubros() {
+  const rs = rubrosDe($('#fSup').value);
+  const sel = $('#fRubro');
+  const antes = sel.value;
+  sel.innerHTML = (rs.length === 1 ? '' : '<option value="">Elegí un rubro…</option>') +
+    rs.map(r => `<option value="${esc(r.rubro)}">${esc(r.rubro)}</option>`).join('');
+  if (rs.some(r => r.rubro === antes)) sel.value = antes;
+}
+
 function abrirNueva() {
   if (!cat) { toast('Primero descargá los catálogos en Ajustes.'); return abrirAjustes(); }
 
   $('#fFecha').value = new Date().toISOString().slice(0, 10);
   $('#fSup').innerHTML = cat.supervisores
     .map(s => `<option value="${esc(s.id)}"${s.id === cfg.supId ? ' selected' : ''}>${esc(s.nombre)}</option>`).join('');
-  $('#fRubro').innerHTML = '<option value="">Elegí un rubro…</option>' +
-    cat.rubros.map(r => `<option value="${esc(r.rubro)}">${esc(r.rubro)}</option>`).join('');
+  pintarRubros();
+  $('#fSup').onchange = pintarRubros;
 
   localElegido = null;
   const t = $('#fLocalTxt');
@@ -610,30 +632,73 @@ function pintarLista() {
       <div class="m"><b>${esc(i.local)}</b>
       <span>${esc(i.rubro)} · ${esc(i.fecha)}${i.error ? ' · ' + esc(i.error) : ''}</span></div>
       <span class="tag ${i.error ? 'err' : t[0]}">${i.error ? 'Error' : t[1]}</span>
-      ${i.estado === 'BORRADOR' ? `<button class="btn sm ghost" data-abrir="${k}">Seguir</button>` : ''}
+      ${i.estado === 'BORRADOR'
+        ? `<button class="btn sm ghost" data-abrir="${k}">Seguir</button>
+           <button class="icobtn" data-borrar="${k}" aria-label="Eliminar borrador">🗑</button>`
+        : ''}
     </div>`;
   }).join('');
   box.querySelectorAll('[data-abrir]').forEach(b => {
     b.onclick = () => abrirFormulario(insp[Number(b.dataset.abrir)]);
   });
+  box.querySelectorAll('[data-borrar]').forEach(b => {
+    b.onclick = () => borrarBorrador(Number(b.dataset.borrar));
+  });
+}
+
+/**
+ * Solo se pueden eliminar borradores. Los que ya están "Por enviar" no,
+ * para que nadie haga desaparecer por accidente trabajo ya terminado.
+ */
+function borrarBorrador(k) {
+  const i = insp[k];
+  if (!i || i.estado !== 'BORRADOR') return;
+  if (!confirm(`Eliminar el borrador de ${i.local} (${i.rubro})?\n\n` +
+               'Nunca se envió a la planilla, así que no se puede recuperar.')) return;
+  if (borrador && borrador.uuid === i.uuid) borrador = null;
+  insp.splice(k, 1);
+  save(K.insp, insp);
+  vibrar(15);
+  toast('Borrador eliminado.');
+  pintarLista();
+  pintarInicio();
 }
 
 /* =====================================================================
    PANTALLA · Tablero
    ===================================================================== */
+let vistaTablero = 'mias';
+
 function pintarTablero() {
   const box = $('#tabBox');
+  const tabs = `<div class="tabs">
+      <button data-v="mias" class="${vistaTablero === 'mias' ? 'on' : ''}">Mis inspecciones</button>
+      <button data-v="todos" class="${vistaTablero === 'todos' ? 'on' : ''}">Todos los locales</button>
+    </div>`;
+
+  box.innerHTML = tabs + '<div id="tabCuerpo"></div>';
+  box.querySelectorAll('.tabs button').forEach(b => {
+    b.onclick = () => { vistaTablero = b.dataset.v; pintarTablero(); };
+  });
+
+  if (vistaTablero === 'mias') pintarTableroPropio();
+  else pintarTableroGeneral();
+}
+
+/* ---------- Vista propia: lo cargado en este teléfono ---------- */
+function pintarTableroPropio() {
+  const cuerpo = $('#tabCuerpo');
   const datos = insp.filter(i => i.estado !== 'BORRADOR');
 
   if (!datos.length) {
-    box.innerHTML = `<div class="empty"><div class="big">▤</div>
-      <p>El tablero se arma con las inspecciones cerradas.<br>Cerrá una y volvé.</p></div>`;
+    cuerpo.innerHTML = `<div class="empty"><div class="big">▤</div>
+      <p>Se arma con las inspecciones cerradas.<br>Cerrá una y volvé.</p></div>`;
     return;
   }
 
   const locales = new Set(datos.map(d => d.local));
   let rojos = 0;
-  const porRubro = {}, porLocal = {};
+  const porRubro = {};
 
   datos.forEach(d => {
     const def = (cat && cat.rubros.find(r => r.rubro === d.rubro)) || d.def || {};
@@ -642,45 +707,120 @@ function pintarTablero() {
       if (s === null || s === undefined) return;
       if (s === 0) rojos++;
       (porRubro[d.rubro] = porRubro[d.rubro] || [0, 0, 0, 0])[s]++;
-      porLocal[d.local] = porLocal[d.local] || { c: 0, sum: 0 };
-      porLocal[d.local].c++; porLocal[d.local].sum += s;
     });
   });
 
-  const barras = obj => Object.keys(obj).sort().map(k => {
-    const v = obj[k], tot = v.reduce((a, b) => a + b, 0) || 1;
+  const barras = Object.keys(porRubro).sort().map(k => {
+    const v = porRubro[k], tot = v.reduce((a, b) => a + b, 0) || 1;
     const segs = v.map((n, i) => n ? `<i class="f${i}" style="width:${n / tot * 100}%"></i>` : '').join('');
     return `<div class="brow"><span>${esc(k)}</span><span class="bt">${segs}</span><span class="bv">${tot}</span></div>`;
   }).join('');
 
-  const peores = Object.keys(porLocal)
-    .map(k => ({ local: k, prom: porLocal[k].sum / porLocal[k].c }))
-    .sort((a, b) => a.prom - b.prom).slice(0, 8);
-
-  box.innerHTML = `
+  cuerpo.innerHTML = `
     <div class="kpis">
       <div class="kpi"><b class="num">${datos.length}</b><span>Inspecciones</span></div>
       <div class="kpi"><b class="num">${locales.size}</b><span>Locales</span></div>
       <div class="kpi"><b class="num c0">${rojos}</b><span>Alertas rojas</span></div>
     </div>
     <div class="card">
-      <div class="eyebrow">Estado por rubro</div>
-      <div class="bars">${barras(porRubro)}</div>
+      <div class="eyebrow">Sectores por rubro</div>
+      <div class="bars">${barras}</div>
       <div class="legend">${SEM_NOM.map((n, i) =>
         `<span><i style="background:${SEM_HEX[i]}"></i>${n}</span>`).join('')}</div>
+    </div>`;
+}
+
+/* ---------- Vista general: todos los locales, por rubro ----------
+   No se promedian rubros entre sí: el estado del transformador y el de
+   los hornos no son la misma escala. Cada celda es la ÚLTIMA inspección
+   de ese rubro en ese local, y las celdas vacías —lo que nadie miró—
+   suelen decir tanto como los colores.                                */
+function pintarTableroGeneral() {
+  const cuerpo = $('#tabCuerpo');
+  const r = load(K.res, null);
+
+  if (!r) {
+    cuerpo.innerHTML = `<div class="empty"><div class="big">☁</div>
+      <p>Todavía no descargaste el estado general.</p></div>
+      <button class="btn" id="tDescargar">Descargar ahora</button>`;
+    $('#tDescargar').onclick = descargarResumen;
+    return;
+  }
+
+  const rubros = (cat ? cat.rubros.map(x => x.rubro) : [])
+    .filter(rb => r.filas.some(f => f[3] === rb));
+
+  // Un local por fila, un rubro por columna.
+  const porLocal = {};
+  r.filas.forEach(f => {
+    const l = f[0];
+    porLocal[l] = porLocal[l] || { formato: f[1], zona: f[2], cel: {} };
+    porLocal[l].cel[f[3]] = { fecha: f[4], sem: f[5], alertas: Number(f[6]) || 0 };
+  });
+
+  const criticidad = l => rubros.filter(rb => (porLocal[l].cel[rb] || {}).sem === 'Rojo').length;
+  const locales = Object.keys(porLocal).sort((a, b) =>
+    criticidad(b) - criticidad(a) || a.localeCompare(b));
+
+  const iSem = { 'Rojo': 0, 'Naranja': 1, 'Amarillo': 2, 'Verde': 3 };
+  let enRojo = 0, celdas = 0;
+  locales.forEach(l => { if (criticidad(l)) enRojo++; celdas += Object.keys(porLocal[l].cel).length; });
+
+  const cabecera = rubros.map(rb =>
+    `<th title="${esc(rb)}">${esc(rb.split(' ')[0].substring(0, 4))}</th>`).join('');
+
+  const filas = locales.map(l => {
+    const cel = porLocal[l].cel;
+    return `<tr><td class="lc" title="${esc(l)}">${esc(l)}</td>` +
+      rubros.map(rb => {
+        const c = cel[rb];
+        if (!c || !c.sem) return '<td><span class="mz vacia" title="Sin inspeccionar">·</span></td>';
+        return `<td><span class="mz s${iSem[c.sem]}" title="${esc(rb)}: ${esc(c.sem)} · ${esc(c.fecha)}">${
+          c.sem.charAt(0)}</span></td>`;
+      }).join('') + '</tr>';
+  }).join('');
+
+  const desactualizado = r.generado_en && (Date.now() - (r.bajado || 0)) > 86400000;
+
+  cuerpo.innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><b class="num">${locales.length}</b><span>Locales con datos</span></div>
+      <div class="kpi"><b class="num">${celdas}</b><span>Rubros evaluados</span></div>
+      <div class="kpi"><b class="num c0">${enRojo}</b><span>Locales en rojo</span></div>
     </div>
+
     <div class="card">
-      <div class="eyebrow">Locales que peor están</div>
-      <div class="bars">${peores.map(p => {
-        const s = Math.round(p.prom);
-        return `<div class="brow"><span>${esc(p.local)}</span>
-          <span class="bt"><i class="f${s}" style="width:${(p.prom / 3) * 100}%"></i></span>
-          <span class="bv num">${p.prom.toFixed(1)}</span></div>`;
-      }).join('')}</div>
-      <p class="tiny" style="margin:11px 0 0">Promedio de calificación de sus sectores, de 0 a 3.</p>
+      <div class="eyebrow">Estado por local y rubro</div>
+      <div class="matriz"><table><thead><tr><th class="lc">Local</th>${cabecera}</tr></thead>
+        <tbody>${filas}</tbody></table></div>
+      <div class="legend">
+        ${SEM_NOM.map((n, i) => `<span><i style="background:${SEM_HEX[i]}"></i>${n}</span>`).join('')}
+        <span><i style="background:#DFE6EA"></i>Sin inspeccionar</span>
+      </div>
+      <p class="tiny" style="margin:10px 0 0">Cada celda es la última inspección de ese rubro.
+      Los locales con más rubros en rojo van primero.</p>
     </div>
-    <p class="tiny" style="text-align:center">Se arma con las inspecciones de este teléfono.
-    Para el resumen de todos los supervisores, mirá la planilla.</p>`;
+
+    <p class="tiny" style="text-align:center">
+      ${r.generado_en ? 'Datos al ' + esc(r.generado_en) : 'Sin fecha'}
+      ${desactualizado ? ' · conviene actualizar' : ''}</p>
+    <button class="btn ghost" id="tDescargar">Actualizar estado general</button>`;
+
+  $('#tDescargar').onclick = descargarResumen;
+}
+
+async function descargarResumen() {
+  if (!cfg.url || !cfg.token) return toast('Configurá la conexión en Ajustes.');
+  if (!navigator.onLine) return toast('Necesitás conexión para actualizar esta vista.');
+  toast('Descargando…');
+  const r = await llamar({ accion: 'resumen' });
+  if (!r.ok) return toast(r.error || 'No se pudo descargar.');
+  if (!r.filas || !r.filas.length) {
+    return toast('La planilla todavía no generó el resumen. Actualizá los paneles.');
+  }
+  save(K.res, { generado_en: r.generado_en, filas: r.filas, bajado: Date.now() });
+  toast('Estado general actualizado.');
+  pintarTablero();
 }
 
 /* =====================================================================
