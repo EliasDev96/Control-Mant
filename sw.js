@@ -1,49 +1,62 @@
-/* Control Mant · service worker
-   Guarda la app en el teléfono para que abra sin conexión.
-   Los datos de la planilla NUNCA se cachean: siempre van a la red. */
+/**
+ * sw.js — Hace que la app abra sin internet.
+ *
+ * Guarda el programa (HTML, íconos, manifiesto) en el teléfono.
+ * Los datos NO pasan por acá: van a IndexedDB desde la propia app.
+ *
+ * Al publicar una versión nueva, subí el número de VERSION.
+ * Eso borra el caché viejo y obliga a bajar el programa actualizado.
+ */
 
-const CACHE = 'control-mant-v2.3.0';
+const VERSION = 'gmp-v8';
 const ARCHIVOS = [
   './',
   './index.html',
-  './app.js',
-  './manifest.webmanifest',
+  './manifest.json',
   './icon-192.png',
   './icon-512.png'
 ];
 
-self.addEventListener('install', e => {
+self.addEventListener('install', function (e) {
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(ARCHIVOS)).then(() => self.skipWaiting())
+    caches.open(VERSION)
+      .then(function (c) { return c.addAll(ARCHIVOS); })
+      .then(function () { return self.skipWaiting(); })
   );
 });
 
-self.addEventListener('activate', e => {
+self.addEventListener('activate', function (e) {
   e.waitUntil(
-    caches.keys()
-      .then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
+    caches.keys().then(function (claves) {
+      return Promise.all(claves.map(function (k) {
+        if (k !== VERSION) return caches.delete(k);
+      }));
+    }).then(function () { return self.clients.claim(); })
   );
 });
 
-self.addEventListener('fetch', e => {
-  const req = e.request;
-  if (req.method !== 'GET') return;                          // los envíos van directo a la red
-  if (!req.url.startsWith(self.location.origin)) return;     // Apps Script nunca se cachea
+self.addEventListener('fetch', function (e) {
+  const url = e.request.url;
+
+  // Las llamadas al backend nunca se cachean: si no hay señal, la app
+  // guarda el dato localmente y lo reintenta después.
+  if (url.indexOf('script.google.com') !== -1 ||
+      url.indexOf('script.googleusercontent.com') !== -1) return;
+
+  if (e.request.method !== 'GET') return;
 
   e.respondWith(
-    caches.match(req).then(hit => {
-      if (hit) {
-        // Devuelve lo guardado al instante y refresca por detrás.
-        fetch(req).then(r => {
-          if (r && r.ok) caches.open(CACHE).then(c => c.put(req, r.clone()));
-        }).catch(() => {});
-        return hit;
-      }
-      return fetch(req).then(r => {
-        if (r && r.ok) { const cl = r.clone(); caches.open(CACHE).then(c => c.put(req, cl)); }
+    caches.match(e.request).then(function (guardado) {
+      if (guardado) return guardado;
+      return fetch(e.request).then(function (r) {
+        if (r && r.status === 200 && r.type === 'basic') {
+          const copia = r.clone();
+          caches.open(VERSION).then(function (c) { c.put(e.request, copia); });
+        }
         return r;
-      }).catch(() => caches.match('./index.html'));
+      }).catch(function () {
+        return caches.match('./index.html');
+      });
     })
   );
 });
