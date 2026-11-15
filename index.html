@@ -2,395 +2,1423 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
-<meta name="theme-color" content="#1B3A4B">
-<title>Control Mant</title>
-<link rel="manifest" href="manifest.webmanifest">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#143a4e">
+<title>Mantenimiento</title>
+<link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-/* ===================================================================
-   Control Mant — panel de instrumentos para trabajo en campo
-   La única saturación de color del sistema es el semáforo.
-   Todo lo demás es acero, para que el color signifique algo.
-   =================================================================== */
-
 :root{
-  --ink:#131A1F;
-  --ink-2:#4A5A66;
-  --ink-3:#7A8B96;
-  --canvas:#E9EDF0;
-  --surface:#FFFFFF;
-  --line:#CFD8DE;
-  --steel:#1B3A4B;
-  --steel-2:#2E6480;
-
-  --s0:#C5221F;  /* Rojo    */
-  --s1:#E8710A;  /* Naranja */
-  --s2:#EDB100;  /* Amarillo*/
-  --s3:#137333;  /* Verde   */
-
-  --r:10px;
-  --pad:14px;
-  --tap:48px;                       /* objetivo táctil mínimo */
-  --safe-b:env(safe-area-inset-bottom,0px);
-  --safe-t:env(safe-area-inset-top,0px);
+  --fondo:#eef2f4; --sup:#fff; --tinta:#0f1a22; --suave:#5d6f7d;
+  --rail:#143a4e; --raily:#1d4f68; --linea:#d3dce1; --linea2:#e8eef1;
+  --ambar:#b8730b; --verde:#16704a; --rojo:#9e2b22; --azul:#1a5f86;
+  --alto:56px;
 }
-
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html{-webkit-text-size-adjust:100%}
-body{
-  margin:0;background:var(--canvas);color:var(--ink);
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-  font-size:16px;line-height:1.45;
-  overscroll-behavior-y:contain;
-  -webkit-user-select:none;user-select:none;
-}
-input,textarea{-webkit-user-select:text;user-select:text}
+html,body{height:100%;margin:0;overscroll-behavior-y:contain}
+body{background:var(--fondo);color:var(--tinta);
+  font:16px/1.45 'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+code,.mono{font-family:'IBM Plex Mono',monospace;font-size:.85em}
 button,input,select,textarea{font:inherit;color:inherit}
-h1,h2,h3{margin:0;font-weight:750;letter-spacing:-.02em}
-.num{font-variant-numeric:tabular-nums}
 
-/* ---------- Barra superior ---------- */
-.top{
-  position:sticky;top:0;z-index:40;
-  background:var(--steel);color:#fff;
-  padding:calc(var(--safe-t) + 9px) var(--pad) 9px;
-  display:flex;align-items:center;gap:10px;
-  box-shadow:0 1px 0 rgba(0,0,0,.15);
-}
-.top .back{
-  background:none;border:0;color:#fff;font-size:26px;line-height:1;
-  width:40px;height:40px;margin-left:-10px;cursor:pointer;border-radius:10px;
-  display:grid;place-items:center;flex-shrink:0;
-}
-.top .back:active{background:rgba(255,255,255,.16)}
-.top .tt{flex:1;min-width:0}
-.top h1{font-size:16.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.top .sub{font-size:11.5px;opacity:.74;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.badges{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.dot{width:9px;height:9px;border-radius:50%;background:#7A8B96}
-.dot.on{background:#31C48D}
-.pend{
-  background:rgba(255,255,255,.16);border-radius:999px;
-  padding:6px 12px;font-size:13px;font-weight:700;
-  border:0;color:#fff;cursor:pointer;min-height:34px;
-}
-.pend.hot{background:var(--s1)}
+/* ------------------------------------------------------------------ marco */
+#cabecera{position:sticky;top:0;z-index:20;background:var(--rail);color:#fff;
+  padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;display:flex;align-items:center;gap:12px}
+#cabecera .volver{background:none;border:0;color:#cfe0ea;font-size:26px;line-height:1;
+  padding:0 4px;cursor:pointer;min-width:32px;text-align:left}
+#cabecera h1{font-size:18px;font-weight:600;margin:0;flex:1;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#senal{font-size:12px;color:#9dc0d3;display:flex;align-items:center;gap:5px;white-space:nowrap}
+#senal .pto{width:8px;height:8px;border-radius:50%;background:#4caf7d}
+#senal.sin .pto{background:#b8730b}
+#senal.cola .pto{background:#e0a63d}
 
-/* ---------- Contenedor ---------- */
-main{padding:var(--pad);padding-bottom:calc(104px + var(--safe-b));max-width:640px;margin:0 auto}
-body.kb main{padding-bottom:28px}
-.screen{display:none}
-.screen.on{display:block}
+main{padding:16px 16px calc(env(safe-area-inset-bottom) + 28px);max-width:640px;margin:0 auto}
+.pantalla{display:none}
+.pantalla.on{display:block}
 
-/* ---------- Tarjetas ---------- */
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:var(--pad);margin-bottom:11px}
-.card.tight{padding:11px var(--pad)}
-.eyebrow{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px}
-.muted{color:var(--ink-2);font-size:14px}
-.tiny{font-size:12.5px;color:var(--ink-3)}
+/* ---------------------------------------------------------------- ingreso */
+#pIngreso{padding-top:34px;text-align:left}
+#pIngreso h2{font-size:24px;margin:0 0 4px;font-weight:600}
+#pIngreso p.sub{margin:0 0 26px;color:var(--suave);font-size:14px}
+label{display:block;font-size:14px;color:var(--suave);margin:0 0 5px}
+input,select,textarea{width:100%;padding:13px 12px;border:1px solid var(--linea);
+  background:var(--sup);border-radius:0}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--azul);outline-offset:-1px}
+.campo{margin-bottom:16px}
+input[inputmode=numeric]{font-family:'IBM Plex Mono',monospace;letter-spacing:.3em;font-size:22px;text-align:center}
 
-/* ---------- Menú principal ---------- */
-.menu{display:grid;gap:9px}
-.menu button{
-  display:flex;align-items:center;gap:13px;width:100%;text-align:left;
-  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
-  padding:16px var(--pad);cursor:pointer;min-height:72px;
-}
-.menu button:active{background:#F2F6F8}
-.menu .ico{width:38px;height:38px;border-radius:9px;background:var(--steel);color:#fff;display:grid;place-items:center;font-size:18px;flex-shrink:0}
-.menu .lbl{flex:1;min-width:0}
-.menu .lbl b{display:block;font-size:16px;font-weight:700}
-.menu .lbl span{font-size:13px;color:var(--ink-2)}
-.menu .arw{color:var(--ink-3);font-size:20px}
+/* --------------------------------------------------------------- botones */
+.bton{display:block;width:100%;min-height:var(--alto);padding:15px 18px;border:0;
+  background:var(--rail);color:#fff;font-size:16px;font-weight:500;text-align:left;
+  cursor:pointer;margin-bottom:10px}
+.bton:active{background:var(--raily)}
+.bton.claro{background:var(--sup);color:var(--tinta);border:1px solid var(--linea)}
+.bton.claro:active{background:#e7eef2}
+.bton.centro{text-align:center}
+.bton[disabled]{opacity:.45}
+.bton .n{float:right;font-family:'IBM Plex Mono',monospace;font-weight:500}
+.bton .sub{display:block;font-size:13px;font-weight:400;opacity:.72;margin-top:2px}
 
-/* ---------- Campos ---------- */
-label.f{display:block;margin-bottom:13px}
-label.f>span,.flabel{display:block;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);margin-bottom:6px}
-input[type=text],input[type=number],input[type=date],select,textarea{
-  width:100%;padding:13px 12px;border:1px solid var(--line);
-  border-radius:9px;background:#fff;font-size:16px;   /* 16px evita el zoom de iOS */
-  min-height:var(--tap);
-}
-select{-webkit-appearance:none;appearance:none;
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9'><path d='M1 1l6 6 6-6' stroke='%234A5A66' stroke-width='2' fill='none' stroke-linecap='round'/></svg>");
-  background-repeat:no-repeat;background-position:right 13px center;padding-right:38px}
-input:focus,select:focus,textarea:focus{outline:2px solid var(--steel-2);outline-offset:1px}
-textarea{min-height:80px;resize:vertical;line-height:1.45}
-input[type=number]{-moz-appearance:textfield;text-align:center;font-weight:700}
-input[type=number]::-webkit-outer-spin-button,
-input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+/* --------------------------------------------------------------- resumen */
+.saludo{font-size:22px;font-weight:600;margin:2px 0 2px}
+.fechaHoy{color:var(--suave);font-size:14px;margin:0 0 18px}
+.contadores{display:grid;grid-template-columns:repeat(2,1fr);border:1px solid var(--linea);
+  background:var(--sup);margin-bottom:18px}
+.cont{padding:15px 16px;border-right:1px solid var(--linea2);border-bottom:1px solid var(--linea2)}
+.cont:nth-child(2n){border-right:0}
+.cont:nth-last-child(-n+2){border-bottom:0}
+.cont b{display:block;font-size:32px;font-weight:500;font-family:'IBM Plex Mono',monospace;line-height:1.05}
+.cont span{font-size:13.5px;color:var(--suave)}
+.cont.alerta b{color:var(--rojo)}
+.cont.pend b{color:var(--ambar)}
 
-.opener{
-  width:100%;text-align:left;background:#fff;border:1px solid var(--line);
-  border-radius:9px;padding:13px 12px;min-height:var(--tap);cursor:pointer;
-  display:flex;align-items:center;gap:10px;
-}
-.opener .ph{color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.opener .ph.set{color:var(--ink);font-weight:650}
-.opener .arw{margin-left:auto;color:var(--ink-3);flex-shrink:0}
+/* ------------------------------------------------------------------ lista */
+.grupo{margin:20px 0 8px;font-size:13px;color:var(--suave);font-weight:500}
+.item{display:block;width:100%;text-align:left;background:var(--sup);border:0;
+  border-bottom:1px solid var(--linea2);padding:14px 16px;cursor:pointer}
+.lista{border:1px solid var(--linea);background:var(--sup)}
+.lista .item:last-child{border-bottom:0}
+.item:active{background:#eef3f6}
+.item .eq{font-size:13px;color:var(--suave);margin-bottom:2px;display:flex;gap:7px;align-items:center}
+.item .tx{font-size:15.5px;line-height:1.35}
+.item .marcas{margin-top:7px;display:flex;gap:6px;flex-wrap:wrap}
 
-/* ---------- Buscador a pantalla completa ---------- */
-.sheet{position:fixed;inset:0;z-index:70;background:var(--canvas);display:none;flex-direction:column}
-.sheet.on{display:flex}
-.sheet .sh{background:var(--steel);padding:calc(var(--safe-t) + 9px) var(--pad) 11px;display:flex;gap:9px;align-items:center}
-.sheet .sh button{background:none;border:0;color:#fff;font-size:26px;width:40px;height:40px;border-radius:10px;display:grid;place-items:center;cursor:pointer;flex-shrink:0}
-.sheet .sh input{flex:1;min-width:0;border:0;border-radius:9px;padding:12px}
-.sheet .sl{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:9px var(--pad) calc(24px + var(--safe-b))}
-.sheet .sl button{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:9px;padding:14px;margin-bottom:7px;cursor:pointer;min-height:var(--tap)}
-.sheet .sl button:active{background:#F2F6F8}
-.sheet .sl .fmt{font-size:11px;color:var(--ink-3);font-weight:800;letter-spacing:.06em}
+.etiq{display:inline-block;padding:2px 8px;font-size:12px;border:1px solid}
+.etiq.al{color:var(--rojo);border-color:#e3b9b5;background:#fbf0ef}
+.etiq.am{color:var(--ambar);border-color:#e8cfa4;background:#fdf6ea}
+.etiq.ok{color:var(--verde);border-color:#b6d9c8;background:#eef7f2}
+.etiq.gr{color:var(--suave);border-color:var(--linea);background:#f3f6f8}
 
-/* ---------- Semáforo: el elemento central del sistema ---------- */
-.grade{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:2px}
-.grade button{
-  border:1.5px solid var(--line);background:#fff;border-radius:10px;
-  padding:9px 2px 7px;cursor:pointer;min-height:66px;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-}
-.grade .chip{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px;box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.12)}
-.grade .n{font-size:10px;font-weight:800;color:var(--ink-3);letter-spacing:.02em;text-transform:uppercase}
-.grade button[data-v="0"] .chip{background:var(--s0)}
-.grade button[data-v="1"] .chip{background:var(--s1)}
-.grade button[data-v="2"] .chip{background:var(--s2);color:#3A2C00}
-.grade button[data-v="3"] .chip{background:var(--s3)}
-.grade button.sel{border-width:2.5px;background:#F6FAFB}
-.grade button.sel .n{color:var(--ink)}
-.grade button.sel[data-v="0"]{border-color:var(--s0)}
-.grade button.sel[data-v="1"]{border-color:var(--s1)}
-.grade button.sel[data-v="2"]{border-color:var(--s2)}
-.grade button.sel[data-v="3"]{border-color:var(--s3)}
+.filtros{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px}
+.filtros button{padding:8px 14px;border:1px solid var(--linea);background:var(--sup);
+  color:var(--suave);white-space:nowrap;cursor:pointer;font-size:14px}
+.filtros button.on{background:var(--rail);border-color:var(--rail);color:#fff}
 
-/* ---------- Contador con − y + ---------- */
-.step{display:flex;gap:7px;align-items:stretch}
-.step button{
-  width:var(--tap);min-height:var(--tap);flex-shrink:0;
-  border:1px solid var(--line);background:#fff;border-radius:9px;
-  font-size:23px;font-weight:600;line-height:1;cursor:pointer;color:var(--steel);
-}
-.step button:active{background:#E7EEF2}
-.step input{flex:1;min-width:0}
+/* ---------------------------------------------------------------- detalle */
+.ficha{background:var(--sup);border:1px solid var(--linea);padding:16px;margin-bottom:16px}
+.ficha .eq{font-size:13px;color:var(--suave);margin-bottom:6px}
+.ficha .tx{font-size:17px;line-height:1.45}
+.ficha .marcas{margin-top:12px;display:flex;gap:6px;flex-wrap:wrap}
+.alerta{background:#fdf6ea;border:1px solid #e8cfa4;border-left:3px solid var(--ambar);
+  padding:12px 14px;margin-bottom:16px;font-size:14.5px}
+.alerta b{display:block;margin-bottom:3px}
+.pregunta{font-size:15px;font-weight:500;margin:0 0 10px}
+.opciones{display:grid;gap:8px;margin-bottom:20px}
+.op{min-height:var(--alto);border:1px solid var(--linea);background:var(--sup);
+  padding:14px 16px;text-align:left;cursor:pointer;font-size:15.5px}
+.op:active{background:#eef3f6}
+.op.on{border-color:var(--rail);border-width:2px;background:#eef3f6;font-weight:500}
+.op.on.malo{border-color:var(--rojo);background:#fbf0ef}
+.op.on.bueno{border-color:var(--verde);background:#eef7f2}
+.notas{margin-bottom:20px}
+.notas.oculta{display:none}
+.puntajes{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:8px}
+.pt{min-height:64px;border:1px solid var(--linea);background:var(--sup);cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.pt b{font-size:22px;font-family:'IBM Plex Mono',monospace;font-weight:500}
+.pt span{font-size:10.5px;color:var(--suave)}
+.pt.on{border-color:var(--rail);border-width:2px;background:#eef3f6}
 
-/* ---------- Medidor de operatividad ---------- */
-.gauge{margin-top:12px;background:#F5F8F9;border-radius:9px;padding:11px 12px}
-.gauge .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
-.gauge .val{font-size:21px;font-weight:800}
-.gauge .track{height:8px;background:#DFE6EA;border-radius:99px;overflow:hidden}
-.gauge .fill{height:100%;border-radius:99px;transition:width .2s ease}
-.f0{background:var(--s0)} .f1{background:var(--s1)}
-.f2{background:var(--s2)} .f3{background:var(--s3)}
-.c0{color:var(--s0)} .c1{color:var(--s1)} .c2{color:var(--s2)} .c3{color:var(--s3)}
+.vacio{padding:40px 20px;text-align:center;color:var(--suave);font-size:15px;
+  background:var(--sup);border:1px solid var(--linea)}
+.vacio b{display:block;color:var(--tinta);font-weight:500;margin-bottom:5px}
+.nota{font-size:13.5px;color:var(--suave);margin:0 0 14px}
 
-/* ---------- Sector ---------- */
-.sector{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
-.sector>summary{list-style:none;cursor:pointer;padding:15px var(--pad);display:flex;align-items:center;gap:11px;min-height:58px}
-.sector>summary::-webkit-details-marker{display:none}
-.sector[open]>summary{background:#F7FAFB;border-bottom:1px solid #EEF2F4}
-.sector .sq{width:13px;height:13px;border-radius:4px;background:#DFE6EA;flex-shrink:0}
-.sector .nm{flex:1;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sector .st{font-size:12.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;flex-shrink:0}
-.sector .body{padding:0 var(--pad) var(--pad)}
-
-.eq{padding:14px 0;border-bottom:1px solid #F0F4F6}
-.eq:last-of-type{border-bottom:0}
-.eq .en{font-weight:650;margin-bottom:10px;font-size:15.5px}
-.qty{display:grid;gap:11px}
-.qty label{margin:0}
-
-.warn{background:#FDF3E7;border:1px solid #F0C99A;color:#8A4B08;border-radius:9px;padding:10px 11px;font-size:13px;margin-top:9px}
-.next{width:100%;margin-top:14px;padding:13px;border-radius:9px;border:1px dashed var(--line);background:#F5F8F9;color:var(--steel);font-weight:700;cursor:pointer;min-height:var(--tap)}
-
-/* ---------- Barra de acciones ---------- */
-.bar{
-  position:fixed;left:0;right:0;bottom:0;z-index:35;
-  background:rgba(233,237,240,.95);backdrop-filter:blur(10px);
-  border-top:1px solid var(--line);
-  padding:11px var(--pad) calc(11px + var(--safe-b));
-  display:flex;gap:9px;max-width:640px;margin:0 auto;
-}
-body.kb .bar{display:none}          /* el teclado abierto no debe tapar el campo */
-.btn{flex:1;padding:15px 12px;border-radius:10px;border:1px solid var(--steel);background:var(--steel);color:#fff;font-weight:700;cursor:pointer;min-height:52px}
-.btn:active{transform:translateY(1px)}
-.btn[disabled]{opacity:.45}
-.btn.ghost{background:transparent;color:var(--steel)}
-.btn.sm{padding:10px 13px;flex:0 0 auto;font-size:14px;min-height:44px}
-
-/* ---------- Lista ---------- */
-.item{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:13px var(--pad);margin-bottom:8px;display:flex;gap:11px;align-items:center}
-.item .m{flex:1;min-width:0}
-.item .m b{display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.item .m span{font-size:12.5px;color:var(--ink-2)}
-.tag{font-size:10.5px;font-weight:800;letter-spacing:.05em;padding:5px 9px;border-radius:999px;text-transform:uppercase;flex-shrink:0}
-.tag.bor{background:#EEF2F4;color:var(--ink-2)}
-.tag.pen{background:#FDF0E2;color:#8A4B08}
-.tag.syn{background:#E4F2E8;color:#137333}
-.tag.err{background:#FBE6E5;color:#9B1C19}
-
-/* ---------- Tablero ---------- */
-.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:11px}
-.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:13px 8px;text-align:center}
-.kpi b{display:block;font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
-.kpi span{font-size:10px;color:var(--ink-3);font-weight:800;letter-spacing:.05em;text-transform:uppercase}
-.bars{display:grid;gap:9px}
-.brow{display:grid;grid-template-columns:minmax(0,1fr) 96px 40px;gap:8px;align-items:center;font-size:13.5px}
-.brow>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.brow .bt{height:20px;background:#DFE6EA;border-radius:4px;overflow:hidden;display:flex}
-.brow .bt i{display:block;height:100%}
-.brow .bv{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;font-size:13px}
-.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:11px;font-size:12px;color:var(--ink-2)}
-.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
-
-/* ---------- Varios ---------- */
-.empty{text-align:center;padding:40px 20px;color:var(--ink-3)}
-.empty .big{font-size:34px;margin-bottom:10px;opacity:.55}
-.toast{
-  position:fixed;left:50%;transform:translateX(-50%);
-  bottom:calc(96px + var(--safe-b));z-index:80;
-  background:var(--ink);color:#fff;padding:12px 18px;border-radius:10px;
-  font-size:14px;max-width:88%;text-align:center;
-  opacity:0;pointer-events:none;transition:opacity .2s;
-}
-.toast.on{opacity:1}
-body.kb .toast{bottom:24px}
-.steps{display:flex;gap:5px;margin-bottom:14px}
-.steps i{flex:1;height:3px;border-radius:99px;background:var(--line)}
-.steps i.on{background:var(--steel)}
-
-/* ---------- Pestañas del tablero ---------- */
-.tabs{display:flex;gap:6px;background:#DFE6EA;border-radius:10px;padding:4px;margin-bottom:11px}
-.tabs button{flex:1;border:0;background:none;border-radius:8px;padding:11px 6px;font-weight:700;font-size:13.5px;color:var(--ink-2);cursor:pointer;min-height:44px}
-.tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(19,26,31,.14)}
-
-/* ---------- Matriz de locales por rubro ---------- */
-.matriz{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 calc(var(--pad) * -1);padding:0 var(--pad)}
-.matriz table{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px}
-.matriz th{font-weight:800;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);padding:0 4px 7px;text-align:center;white-space:nowrap}
-.matriz td{padding:3px 4px;text-align:center}
-.matriz .lc{text-align:left;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  position:sticky;left:0;background:#fff;padding-right:9px;z-index:2}
-.matriz thead .lc{background:#fff}
-.matriz tbody tr:nth-child(even) td{background:#F7FAFB}
-.matriz tbody tr:nth-child(even) .lc{background:#F7FAFB}
-.mz{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:6px;color:#fff;font-weight:800;font-size:11px}
-.mz.s0{background:var(--s0)} .mz.s1{background:var(--s1)}
-.mz.s2{background:var(--s2);color:#3A2C00} .mz.s3{background:var(--s3)}
-.mz.vacia{background:#DFE6EA;color:#9AAAB4}
-
-/* ---------- Botón de ícono ---------- */
-.icobtn{
-  width:44px;min-height:44px;flex-shrink:0;border:1px solid var(--line);
-  background:#fff;border-radius:9px;font-size:17px;cursor:pointer;line-height:1;
-}
-.icobtn:active{background:#FBE6E5;border-color:var(--s0)}
-
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
-@media (min-width:520px){ .qty{grid-template-columns:1fr 1fr} }
+#aviso{position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom) + 18px);
+  background:var(--rail);color:#fff;padding:14px 18px;font-size:15px;z-index:60;display:none;
+  max-width:600px;margin:0 auto}
+#aviso.mal{background:var(--rojo)}
+#instalar{display:none;margin-bottom:14px}
+.revLista{margin:0;padding-left:18px;font-size:14px;color:var(--suave)}
+/* ausencias (1.6) */
+.tit2{font-size:17px;font-weight:600;margin:6px 0 10px}
+.ausHoy{background:var(--sup);border:1px solid var(--linea);border-left:4px solid var(--azul);padding:16px;margin-bottom:18px}
+.ausHoy b{display:block;font-size:17px;margin-bottom:4px}
+.ausHoy p{margin:0 0 12px;color:var(--suave);font-size:14.5px}
+.ausNota{background:var(--sup);border:1px solid var(--linea);padding:11px 14px;margin-bottom:14px;font-size:14px}
+.ausNota.mal{border-left:3px solid var(--rojo)}
+.ausNota.ok{border-left:3px solid var(--verde)}
+.ausNota.esp{border-left:3px solid var(--ambar)}
+.aviso2{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0}
+.bton.chico{width:auto;min-height:40px;padding:8px 14px;font-size:14px;display:inline-block;margin:0}
+.atajos2{display:flex;gap:8px;margin-bottom:14px}
+.atajos2 button{flex:1;padding:10px 6px;border:1px solid var(--linea);background:var(--sup);font-size:14px;cursor:pointer}
+.atajos2 button:active{background:#eef3f6}
+.fechas2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fechas2 input{width:100%}
+.revLista li{margin-bottom:3px}
 </style>
 </head>
 <body>
 
-<header class="top">
-  <button class="back" id="btnBack" hidden aria-label="Volver">‹</button>
-  <div class="tt"><h1 id="ttl">Control Mant</h1><div class="sub" id="sub" hidden></div></div>
-  <div class="badges">
-    <span class="dot" id="dot" title="Conexión"></span>
-    <button class="pend" id="pend" hidden></button>
-  </div>
+<header id="cabecera">
+  <button class="volver" id="btVolver" onclick="volver()" style="display:none" aria-label="Volver">‹</button>
+  <h1 id="titulo">Mantenimiento</h1>
+  <div id="senal"><span class="pto"></span><span id="senalTxt"></span></div>
 </header>
 
 <main>
 
-  <!-- ============ INICIO ============ -->
-  <section class="screen on" id="sc-inicio">
-    <div class="card tight">
-      <div class="eyebrow">Supervisor</div>
-      <div id="whoName" style="font-weight:700">—</div>
-    </div>
-    <div class="menu">
-      <button data-go="nueva"><span class="ico">✚</span><span class="lbl"><b>Nueva inspección</b><span>Cargar una visita a un local</span></span><span class="arw">›</span></button>
-      <button data-go="lista"><span class="ico">☰</span><span class="lbl"><b>Mis inspecciones</b><span id="mLista">—</span></span><span class="arw">›</span></button>
-      <button data-go="tablero"><span class="ico">▤</span><span class="lbl"><b>Tablero</b><span>Resumen y estado de los locales</span></span><span class="arw">›</span></button>
-      <button data-go="ajustes"><span class="ico">⚙</span><span class="lbl"><b>Ajustes</b><span>Conexión, supervisor y catálogos</span></span><span class="arw">›</span></button>
-    </div>
-    <p class="tiny" style="text-align:center;margin-top:16px" id="lastSync">—</p>
-  </section>
+<!-- =============================================================== ingreso -->
+<section id="pIngreso" class="pantalla on">
+  <h2>Ingresá con tu código</h2>
+  <p class="sub">Solo esta vez. Después la app abre sola, con o sin señal.</p>
+  <div class="campo">
+    <label for="inCodigo">Código de técnico</label>
+    <input id="inCodigo" autocapitalize="characters" autocomplete="username" placeholder="T001">
+  </div>
+  <div class="campo">
+    <label for="inPin">PIN</label>
+    <input id="inPin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password">
+  </div>
+  <button class="bton centro" onclick="entrar()">Entrar</button>
+</section>
 
-  <!-- ============ NUEVA ============ -->
-  <section class="screen" id="sc-nueva">
-    <div class="steps"><i class="on"></i><i></i></div>
-    <div class="card">
-      <label class="f"><span>Fecha de la visita</span><input type="date" id="fFecha"></label>
-      <label class="f"><span>Supervisor</span><select id="fSup"></select></label>
-      <div class="f">
-        <span class="flabel">Local</span>
-        <button class="opener" id="fLocalBtn" type="button"><span class="ph" id="fLocalTxt">Buscar local…</span><span class="arw">›</span></button>
-      </div>
-      <label class="f" style="margin-bottom:0"><span>Rubro</span><select id="fRubro"></select></label>
-    </div>
-  </section>
+<!-- ================================================================ inicio -->
+<section id="pInicio" class="pantalla">
+  <button class="bton claro" id="instalar" onclick="instalar()">Instalar en el teléfono
+    <span class="sub">Para abrirla sin entrar al navegador</span></button>
+  <p class="saludo" id="saludo"></p>
+  <p class="fechaHoy" id="fechaHoy"></p>
+  <div id="ausInicio"></div>
+  <div class="contadores" id="contadores"></div>
+  <div id="botonera"></div>
+</section>
 
-  <!-- ============ FORMULARIO ============ -->
-  <section class="screen" id="sc-form">
-    <div id="fSectores"></div>
-    <div class="card">
-      <label class="f" style="margin-bottom:0"><span>Observaciones generales</span>
-        <textarea id="fObs" placeholder="Comentarios sobre la visita en general"></textarea>
-      </label>
-    </div>
-  </section>
+<!-- ================================================================ tareas -->
+<section id="pTareas" class="pantalla">
+  <div class="filtros" id="filtros"></div>
+  <div id="listaTareas"></div>
+</section>
 
-  <!-- ============ LISTA ============ -->
-  <section class="screen" id="sc-lista"><div id="listaBox"></div></section>
+<!-- =============================================================== detalle -->
+<section id="pDetalle" class="pantalla"></section>
 
-  <!-- ============ TABLERO ============ -->
-  <section class="screen" id="sc-tablero"><div id="tabBox"></div></section>
+<!-- ============================================================ evaluación -->
+<section id="pEvaluar" class="pantalla"></section>
 
-  <!-- ============ AJUSTES ============ -->
-  <section class="screen" id="sc-ajustes">
-    <div class="card">
-      <div class="eyebrow">Conexión con la planilla</div>
-      <label class="f"><span>Dirección del servicio</span>
-        <input type="text" id="aUrl" placeholder="https://script.google.com/…/exec" autocomplete="off" autocapitalize="off" spellcheck="false">
-      </label>
-      <label class="f"><span>Clave</span>
-        <input type="text" id="aTok" placeholder="La frase que pusiste en el TOKEN" autocomplete="off" autocapitalize="off" spellcheck="false">
-      </label>
-      <button class="btn" id="aProbar">Probar y descargar catálogos</button>
-      <p class="tiny" id="aEstado" style="margin:11px 0 0"></p>
-    </div>
-    <div class="card">
-      <div class="eyebrow">Este dispositivo</div>
-      <label class="f" style="margin-bottom:0"><span>Supervisor que lo usa</span><select id="aSup"></select></label>
-    </div>
-    <div class="card">
-      <div class="eyebrow">Catálogos guardados</div>
-      <p class="muted" id="aCat" style="margin:0 0 12px">Sin descargar todavía.</p>
-      <button class="btn ghost" id="aActualizar">Actualizar catálogos</button>
-    </div>
-    <div class="card">
-      <div class="eyebrow">Espacio</div>
-      <p class="tiny" style="margin:0 0 12px">Borra del teléfono las inspecciones ya enviadas. Siguen guardadas en la planilla.</p>
-      <button class="btn ghost" id="aBorrar" style="color:var(--s0);border-color:var(--s0)">Borrar inspecciones enviadas</button>
-    </div>
-  </section>
+<!-- ========================================================= extraordinario -->
+<section id="pExtra" class="pantalla">
+  <p class="nota">Para trabajos que no estaban planificados: una falla, un pedido del local,
+    una reparación de urgencia.</p>
+  <div class="campo">
+    <label for="exLocal">Local</label>
+    <select id="exLocal"></select>
+  </div>
+  <div class="campo">
+    <label for="exRubro">Rubro</label>
+    <select id="exRubro">
+      <option value="">Elegí el rubro…</option>
+      <option value="AIRE ACONDICIONADO">Aires Acondicionados</option>
+      <option value="FRIO ALIMENTARIO">Frío Alimentario</option>
+      <option value="ELECTRICIDAD">Electricidad</option>
+      <option value="MECANICA PRODUCCION">Mecánica / Producción</option>
+      <option value="OBRAS CIVILES">Obras Civiles</option>
+    </select>
+  </div>
+  <div class="campo">
+    <label for="exTitulo">Qué pasó</label>
+    <input id="exTitulo" placeholder="Falla en cámara frigorífica">
+  </div>
+  <div class="campo">
+    <label for="exDesc">Qué hiciste</label>
+    <textarea id="exDesc" rows="4" placeholder="Se cambió el contactor y se probó el arranque"></textarea>
+  </div>
+  <div class="campo">
+    <label for="exEquipo">Equipo o sector (opcional)</label>
+    <input id="exEquipo" placeholder="Cámara de congelados">
+  </div>
+  <button class="bton centro" onclick="guardarExtra(this)">Registrar trabajo</button>
+</section>
+
+<!-- ============================================================ ausencias -->
+<section id="pAusencias" class="pantalla">
+  <div id="ausLista"></div>
+  <h2 class="tit2">Avisar una ausencia</h2>
+  <p class="nota">Solo el tipo y las fechas: no hace falta contar nada médico. Tu supervisor lo tiene que aprobar;
+    hasta entonces seguís viendo tus tareas como siempre.</p>
+  <p class="pregunta">¿Qué tipo de ausencia?</p>
+  <div class="opciones" id="ausTipos"></div>
+  <p class="pregunta">¿Qué días?</p>
+  <div class="atajos2">
+    <button onclick="atajoAusencia('HOY')">Desde hoy</button>
+    <button onclick="atajoAusencia('TRES')">Los últimos 3 días</button>
+  </div>
+  <div class="fechas2">
+    <div class="campo"><label for="ausDesde">Desde</label><input type="date" id="ausDesde"></div>
+    <div class="campo"><label for="ausHasta">Hasta (inclusive)</label><input type="date" id="ausHasta"></div>
+  </div>
+  <button class="bton centro" id="ausEnviar" onclick="enviarAusencia(this)">Enviar aviso</button>
+</section>
+
+<!-- ============================================================== ajustes -->
+<section id="pAjustes" class="pantalla">
+  <div class="ficha">
+    <div class="eq">Técnico</div>
+    <div class="tx" id="ajQuien"></div>
+  </div>
+  <div class="ficha">
+    <div class="eq">Sincronización</div>
+    <div class="tx" id="ajSync"></div>
+  </div>
+  <div class="alerta" id="ajError" style="display:none">
+    <b>La última sincronización falló</b>
+    <span id="ajErrorTx"></span>
+  </div>
+  <div class="ficha" id="ajRev" style="display:none">
+    <div class="eq">Enviados a revisión del supervisor · últimos 14 días</div>
+    <div class="tx" id="ajRevN"></div>
+    <p class="nota" style="margin:6px 0 8px">El sistema no pudo aceptarlos solo (por ejemplo, porque ese local
+      ya no figura a tu nombre). No se perdieron: los tiene tu supervisor, que decide si cuentan.
+      No hace falta que los cargues de nuevo.</p>
+    <ul class="revLista" id="ajRevLista"></ul>
+  </div>
+  <button class="bton claro" onclick="verAusencias()">Avisar una ausencia
+    <span class="sub">Vacaciones, reposo o permiso</span></button>
+  <button class="bton claro" onclick="sincronizar(true)">Sincronizar ahora</button>
+  <button class="bton claro" onclick="salir()">Cerrar sesión</button>
+  <p class="nota" style="margin-top:14px">Al cerrar sesión se borra todo lo guardado en este teléfono.
+    Sincronizá antes para no perder nada.</p>
+</section>
 
 </main>
+<div id="aviso" role="status"></div>
 
-<!-- Buscador de locales a pantalla completa -->
-<div class="sheet" id="sheet">
-  <div class="sh">
-    <button id="shClose" aria-label="Cerrar">‹</button>
-    <input type="text" id="shInput" placeholder="Buscar local…" autocomplete="off" autocapitalize="off" spellcheck="false">
-  </div>
-  <div class="sl" id="shList"></div>
-</div>
+<script>
+/* =====================================================================
+   CONFIGURACIÓN
+   ===================================================================== */
+var API = 'https://script.google.com/macros/s/AKfycbwBnBRYTGMzOkuBpWPd2FraEZZSvH_KGRz-pJ5AjX9ai7rQSURjwhFWqgngZpGB3nl4oA/exec';
+var VERSION_APP = '1.6.0';
 
-<div class="bar" id="bar" hidden></div>
-<div class="toast" id="toast"></div>
+/* Red de seguridad de la cola: un registro que el servidor rechaza una y otra
+   vez por un error que no sabe clasificar se manda a revisión del supervisor
+   recién cuando se cumplen las dos cosas. Antes de eso se sigue reintentando,
+   porque casi siempre es un corte de señal o una falla pasajera. */
+var REVISION_INTENTOS = 10;
+var REVISION_DIAS = 3;
 
-<script src="app.js"></script>
+/* =====================================================================
+   ALMACENAMIENTO LOCAL (IndexedDB)
+   Guarda todo en el teléfono. La app funciona igual sin señal.
+   ===================================================================== */
+var BD = null;
+var ALMACENES = ['clave', 'ejecuciones', 'evaluaciones', 'observaciones', 'borradores'];
+
+function abrirBD(){
+  return new Promise(function(ok, mal){
+    var p = indexedDB.open('gmp', 1);
+    p.onupgradeneeded = function(e){
+      var db = e.target.result;
+      ALMACENES.forEach(function(n){
+        if(!db.objectStoreNames.contains(n))
+          db.createObjectStore(n, {keyPath: n==='clave' ? 'k' : 'id'});
+      });
+    };
+    p.onsuccess = function(e){ BD = e.target.result; ok(BD); };
+    p.onerror = function(){ mal(new Error('No se pudo abrir el almacenamiento del teléfono')); };
+  });
+}
+
+function guardar(almacen, obj){
+  return new Promise(function(ok, mal){
+    var t = BD.transaction(almacen, 'readwrite');
+    t.objectStore(almacen).put(obj);
+    t.oncomplete = function(){ ok(obj); };
+    t.onerror = function(){ mal(t.error); };
+  });
+}
+function leer(almacen, id){
+  return new Promise(function(ok){
+    var r = BD.transaction(almacen, 'readonly').objectStore(almacen).get(id);
+    r.onsuccess = function(){ ok(r.result || null); };
+    r.onerror = function(){ ok(null); };
+  });
+}
+function todos(almacen){
+  return new Promise(function(ok){
+    var r = BD.transaction(almacen, 'readonly').objectStore(almacen).getAll();
+    r.onsuccess = function(){ ok(r.result || []); };
+    r.onerror = function(){ ok([]); };
+  });
+}
+function borrar(almacen, id){
+  return new Promise(function(ok){
+    var t = BD.transaction(almacen, 'readwrite');
+    t.objectStore(almacen).delete(id);
+    t.oncomplete = ok;
+  });
+}
+function vaciarTodo(){
+  return Promise.all(ALMACENES.map(function(n){
+    return new Promise(function(ok){
+      var t = BD.transaction(n,'readwrite'); t.objectStore(n).clear(); t.oncomplete = ok;
+    });
+  }));
+}
+function ponerClave(k, v){ return guardar('clave', {k:k, v:v}); }
+function verClave(k){ return leer('clave', k).then(function(r){ return r ? r.v : null; }); }
+
+/* =====================================================================
+   COMUNICACIÓN CON EL SERVIDOR
+   Se manda como texto plano a propósito: así el navegador no hace una
+   consulta previa que Apps Script no sabe responder.
+   ===================================================================== */
+var ESTADO = {token:null, usuario:null, hoy:null, cola:0, ultimaSync:null, errorSync:null};
+
+function llamar(accion, datos){
+  return fetch(API, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({accion:accion, token:ESTADO.token, datos:datos||{}}),
+    redirect:'follow'
+  }).then(function(r){ return r.json(); }).then(function(o){
+    if(!o.ok) throw new Error(o.error);
+    return o.datos;
+  });
+}
+
+function hayInternet(){ return navigator.onLine; }
+
+/* =====================================================================
+   PANTALLAS
+   ===================================================================== */
+var PILA = [];
+function ir(pantalla, titulo, apilar){
+  if(apilar !== false && PILA[PILA.length-1] !== pantalla) PILA.push(pantalla);
+  Array.prototype.forEach.call(document.querySelectorAll('.pantalla'), function(s){
+    s.className = 'pantalla' + (s.id === pantalla ? ' on' : '');
+  });
+  document.getElementById('titulo').textContent = titulo;
+  document.getElementById('btVolver').style.display = (PILA.length > 1) ? 'block' : 'none';
+  window.scrollTo(0,0);
+}
+function volver(){
+  PILA.pop();
+  var p = PILA[PILA.length-1] || 'pInicio';
+  if(p === 'pInicio') { PILA = ['pInicio']; verInicio(); }
+  else ir(p, document.getElementById('titulo').textContent, false);
+}
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+function avisar(txt, mal){
+  var a = $('aviso'); a.textContent = txt; a.className = mal ? 'mal' : '';
+  a.style.display = 'block'; clearTimeout(a._t);
+  a._t = setTimeout(function(){ a.style.display='none'; }, 3400);
+}
+
+function pintarSenal(){
+  var s = $('senal'), t = $('senalTxt');
+  if(!hayInternet()){ s.className = 'sin'; t.textContent = 'Sin señal'; }
+  else if(ESTADO.cola > 0){ s.className = 'cola'; t.textContent = ESTADO.cola + ' sin enviar'; }
+  else { s.className = ''; t.textContent = 'Al día'; }
+}
+
+/* =====================================================================
+   FECHAS
+   ===================================================================== */
+function hoyTexto(){
+  var d = new Date();
+  return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+}
+function fechaLarga(){
+  var dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  var meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto',
+               'septiembre','octubre','noviembre','diciembre'];
+  var d = new Date();
+  return dias[d.getDay()]+' '+d.getDate()+' de '+meses[d.getMonth()];
+}
+function fechaCorta(t){   /* "2026-10-28" → "28/10" */
+  var m = String(t||'').match(/^\d{4}-(\d{2})-(\d{2})/);
+  return m ? m[2] + '/' + m[1] : String(t||'');
+}
+function saludoHora(){
+  var h = new Date().getHours();
+  return h < 12 ? 'Buenos días' : (h < 19 ? 'Buenas tardes' : 'Buenas noches');
+}
+function uuid(){
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c){
+    var r = Math.random()*16|0; return (c==='x'?r:(r&0x3|0x8)).toString(16);
+  });
+}
+function dia(d){
+  return {LUN:'lunes', MAR:'martes', MIE:'miércoles', JUE:'jueves',
+          VIE:'viernes', SAB:'sábado', DOM:'domingo'}[String(d||'').toUpperCase()] || '';
+}
+
+/* =====================================================================
+   INGRESO
+   ===================================================================== */
+function entrar(){
+  var c = $('inCodigo').value.trim().toUpperCase(), p = $('inPin').value.trim();
+  if(!c || !p){ avisar('Falta el código o el PIN', true); return; }
+  if(!hayInternet()){ avisar('Para entrar la primera vez hace falta señal', true); return; }
+
+  llamar('login', {codigo:c, pin:p}).then(function(d){
+    if(d.usuario.rol !== 'TECNICO'){
+      throw new Error('Esta app es para técnicos. Los supervisores entran por el panel.');
+    }
+    ESTADO.token = d.token; ESTADO.usuario = d.usuario;
+    return Promise.all([ponerClave('token', d.token), ponerClave('usuario', d.usuario)]);
+  }).then(function(){
+    $('inPin').value = '';
+    return sincronizar(true);
+  }).then(verInicio)
+  .catch(function(e){ avisar(e.message, true); });
+}
+$('inPin').addEventListener('keydown', function(e){ if(e.key === 'Enter') entrar(); });
+
+function salir(){
+  if(ESTADO.cola > 0 && !confirm('Tenés '+ESTADO.cola+' registros sin enviar. Si cerrás sesión se pierden. ¿Seguimos?')) return;
+  vaciarTodo().then(function(){ location.reload(); });
+}
+
+/* =====================================================================
+   GUARDADO SIN REPETIDOS
+   Antes, si el teléfono tardaba, el técnico volvía a tocar "Guardar" y cada
+   toque creaba un registro nuevo (se encontraron 730 repetidos, uno hasta
+   28 veces en un minuto). Ahora:
+     1. el botón se bloquea al primer toque;
+     2. si la misma tarea ya se guardó hace menos de 10 minutos con el mismo
+        resultado, no se guarda otra vez;
+     3. se vuelve al inicio enseguida y se sincroniza de fondo, así el técnico
+        ve que se guardó sin esperar a la señal.
+   El servidor tiene su propio filtro, por si llega algo repetido igual.
+   ===================================================================== */
+var GUARDANDO = false;
+var MIN_REPETIDO = 10;   // minutos
+
+function empezarGuardado(btn){
+  if(GUARDANDO) return false;
+  GUARDANDO = true;
+  if(btn){ btn.disabled = true; btn.setAttribute('data-txt', btn.textContent); btn.textContent = 'Guardando…'; }
+  return true;
+}
+function terminarGuardado(btn){
+  GUARDANDO = false;
+  if(btn && btn.isConnected){
+    btn.disabled = false;
+    if(btn.getAttribute('data-txt')) btn.textContent = btn.getAttribute('data-txt');
+  }
+}
+function textoNormal(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+}
+/* ¿Hay un registro igual guardado hace menos de MIN_REPETIDO minutos? */
+function yaGuardadoRecien(almacen, igual){
+  var limite = Date.now() - MIN_REPETIDO*60000;
+  return todos(almacen).then(function(l){
+    return l.some(function(x){
+      var t = new Date(x.fin || x._guardado || 0).getTime();
+      return t >= limite && igual(x);
+    });
+  });
+}
+/* Después de guardar: al inicio ya, y la sincronización de fondo refresca
+   el inicio solo si el técnico sigue ahí (no lo saca de otra pantalla). */
+function despuesDeGuardar(mensaje){
+  avisar(mensaje);
+  verInicio();
+  sincronizar(false).then(function(){
+    if(PILA[PILA.length-1] === 'pInicio' && $('pInicio').className.indexOf('on') !== -1) verInicio();
+  });
+}
+
+/* =====================================================================
+   SINCRONIZACIÓN
+   Primero sube lo pendiente, después baja el trabajo.
+   ===================================================================== */
+function pendientes(){
+  return Promise.all([todos('ejecuciones'), todos('evaluaciones'), todos('observaciones')])
+    .then(function(r){
+      return {
+        ejecuciones:  r[0].filter(function(x){ return !x._sync; }),
+        evaluaciones: r[1].filter(function(x){ return !x._sync; }),
+        observaciones:r[2].filter(function(x){ return !x._sync; })
+      };
+    });
+}
+
+function contarCola(){
+  return pendientes().then(function(p){
+    ESTADO.cola = p.ejecuciones.length + p.evaluaciones.length + p.observaciones.length;
+    pintarSenal();
+    return ESTADO.cola;
+  });
+}
+
+function limpiar(x){
+  var o = {}; for(var k in x){ if(k.charAt(0) !== '_') o[k] = x[k]; }
+  return o;
+}
+
+/* Lo que se manda al servidor: el registro sin los campos internos, y con
+   la marca aRevision si ya falló demasiadas veces durante demasiados días. */
+function paraEnviar(x){
+  var o = limpiar(x);
+  if((x._intentos||0) >= REVISION_INTENTOS && x._primerError &&
+     (Date.now() - new Date(x._primerError).getTime()) >= REVISION_DIAS*86400000){
+    o.aRevision = true;
+  }
+  return o;
+}
+
+/* Las observaciones que nacieron de una tarea viajan con ella: si la tarea
+   quedó en revisión, la observación también, y se cuentan como un solo
+   registro (igual que en el panel del supervisor). */
+function cuentaAparte(almacen, x){ return !(almacen === 'observaciones' && x.idEjecucion); }
+
+/* Anota en el registro cómo le fue en el servidor.
+   Devuelve 1 si acaba de quedar en revisión, para avisarle al técnico. */
+function anotarResultado(almacen, res){
+  return leer(almacen, res.id).then(function(x){
+    if(!x) return 0;
+    var nuevoEnRevision = 0;
+    if(res.estado === 'GUARDADA' || res.estado === 'YA_EXISTIA' || res.estado === 'EN_REVISION'){
+      x._sync = 1;
+      if(res.estado === 'EN_REVISION' || res.revision){
+        if(!x._revision && cuentaAparte(almacen, x)) nuevoEnRevision = 1;
+        x._revision = res.mensaje || x._revision || 'Quedó para revisión del supervisor';
+      }
+      delete x._ultimoError;
+    } else {
+      // error temporal: se queda en la cola y se lleva la cuenta
+      x._intentos = (x._intentos||0) + 1;
+      if(!x._primerError) x._primerError = new Date().toISOString();
+      x._ultimoError = res.mensaje || 'Error sin detalle';
+    }
+    return guardar(almacen, x).then(function(){ return nuevoEnRevision; });
+  });
+}
+
+/* Lo enviado a revisión en los últimos 14 días. La app no se entera de lo que
+   decide el supervisor, así que no tiene sentido mostrar lo viejo para siempre. */
+var DIAS_VER_REVISION = 14;
+function enRevision(){
+  var d = new Date(Date.now() - DIAS_VER_REVISION*86400000);
+  var desde = d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+  function reciente(x){ return String(x.fechaProgramada || x.fecha || '9999') >= desde; }
+  return Promise.all([todos('ejecuciones'), todos('evaluaciones'), todos('observaciones')])
+    .then(function(r){
+      return r[0].concat(r[1]).filter(function(x){ return !!x._revision && reciente(x); })
+        .concat(r[2].filter(function(x){ return !!x._revision && reciente(x) && cuentaAparte('observaciones', x); }));
+    });
+}
+
+function sincronizar(avisarFin){
+  if(!ESTADO.token) return Promise.resolve();
+  if(!hayInternet()){ if(avisarFin) avisar('Sin señal. Se envía solo cuando vuelva.', true);
+                      return contarCola(); }
+
+  var revisados = 0;
+  return pendientes().then(function(p){
+    var total = p.ejecuciones.length + p.evaluaciones.length + p.observaciones.length;
+    if(!total) return null;
+    return llamar('subirLote', {lote:{
+      ejecuciones:  p.ejecuciones.map(paraEnviar),
+      evaluaciones: p.evaluaciones.map(paraEnviar),
+      observaciones:p.observaciones.map(paraEnviar)
+    }});
+  }).then(function(r){
+    if(!r) return 0;
+    /* Solo sale de la cola lo que el servidor confirmó: guardado, ya existente
+       o enviado a revisión del supervisor. Un error temporal se reintenta. */
+    var pares = [['ejecuciones', r.ejecuciones], ['evaluaciones', r.evaluaciones],
+                 ['observaciones', r.observaciones]];
+    var tareas = [];
+    pares.forEach(function(par){
+      (par[1]||[]).forEach(function(res){ tareas.push(anotarResultado(par[0], res)); });
+    });
+    return Promise.all(tareas).then(function(n){
+      return n.reduce(function(a, b){ return a + b; }, 0);
+    });
+  }).then(function(nuevos){
+    revisados = nuevos || 0;
+    return llamar('trabajoDelDia', {fecha: hoyTexto()});
+  }).then(function(d){
+    ESTADO.hoy = d;
+    ESTADO.ultimaSync = new Date().toISOString();
+    ESTADO.errorSync = null;
+    return Promise.all([ponerClave('hoy', d), ponerClave('ultimaSync', ESTADO.ultimaSync),
+                        ponerClave('errorSync', null)]);
+  }).then(contarCola)
+  .then(function(){
+    if(revisados) avisarRevision(revisados);
+    else if(avisarFin) avisar('Sincronizado');
+  })
+  .catch(function(e){
+    /* Se guarda el último error para verlo en "Mi cuenta": antes, si fallaba
+       la descarga del trabajo del día, el técnico no se enteraba. */
+    ESTADO.errorSync = {cuando: new Date().toISOString(), mensaje: String(e.message || e)};
+    ponerClave('errorSync', ESTADO.errorSync);
+    contarCola();
+    if(revisados) avisarRevision(revisados);
+    else if(avisarFin) avisar('No se pudo sincronizar: ' + e.message, true);
+  });
+}
+
+/* Se avisa siempre, aunque la sincronización haya sido automática: el técnico
+   tiene que saber que ese trabajo no se perdió, pero tampoco entró solo. */
+function avisarRevision(n){
+  avisar(n === 1 ? '1 registro quedó para revisión del supervisor. Mirá "Mi cuenta".'
+                 : n + ' registros quedaron para revisión del supervisor. Mirá "Mi cuenta".', true);
+}
+
+/* =====================================================================
+   QUÉ QUEDA PENDIENTE
+   La lista viene del servidor, pero se descuenta localmente lo que el
+   técnico ya hizo sin señal.
+     'pendientes' → lo que le toca hoy (más lo atrasado de esta semana)
+     'semana'     → toda la ventana, para adelantar trabajo
+     'vencidas'   → ventanas anteriores ya cerradas
+   ===================================================================== */
+function hechasLocalmente(){
+  return todos('ejecuciones').then(function(e){
+    var m = {};   // local|tarea → todas las fechas en que se registró
+    e.forEach(function(x){
+      if(!x.idTarea) return;
+      var k = x.idLocal + '|' + x.idTarea;
+      (m[k] = m[k] || []).push(x.fechaProgramada);
+    });
+    return m;
+  });
+}
+
+/* ¿Ya se hizo esta tarea? Una diaria, solo si se hizo ese mismo día;
+   las demás, si se hizo en cualquier día de su ventana. */
+function yaHecha(fechas, t){
+  if(!fechas) return false;
+  var diaria = String(t.frecuencia).toUpperCase() === 'DIARIA';
+  return fechas.some(function(f){
+    return diaria ? f === t.fechaProgramada : (f >= t.ventanaDesde && f <= t.ventanaHasta);
+  });
+}
+
+function bloques(){ return (ESTADO.hoy && ESTADO.hoy.locales) ? ESTADO.hoy.locales : []; }
+
+function recolectar(cual){
+  return hechasLocalmente().then(function(hechas){
+    var out = [];
+    bloques().forEach(function(b){
+      var lista = (cual === 'vencidas') ? b.vencidas
+                : (cual === 'semana')   ? (b.pendientes||[]).concat(b.masAdelante||[])
+                : b.pendientes;
+      (lista||[]).forEach(function(t){
+        var k = b.idLocal + '|' + t.idTarea;
+        if(yaHecha(hechas[k], t)) return;
+        t._local = b.idLocal; t._localNombre = b.local; t._codigo = b.codigo;
+        out.push(t);
+      });
+    });
+    return out;
+  });
+}
+
+/* =====================================================================
+   INICIO
+   ===================================================================== */
+function verInicio(){
+  PILA = ['pInicio'];
+  ir('pInicio', 'Mantenimiento', false);
+
+  var u = ESTADO.usuario || {};
+  $('saludo').textContent = saludoHora() + ', ' + (u.nombre || '');
+  $('fechaHoy').textContent = fechaLarga();
+
+  Promise.all([recolectar('pendientes'), recolectar('vencidas'), todos('borradores'),
+               todos('ejecuciones'), recolectar('semana'), evaluacionesPendientes()]).then(function(r){
+    var pend = r[0], venc = r[1], borr = r[2], semana = r[4];
+    var hechasHoy = r[3].filter(function(x){ return x.fechaProgramada === hoyTexto(); }).length;
+    var evals = r[5].length;
+
+    $('contadores').innerHTML =
+      cont(pend.length, 'Para hoy', pend.length ? 'pend' : '') +
+      cont(hechasHoy, 'Hechas hoy', '') +
+      cont(venc.length, 'Vencidas', venc.length ? 'alerta' : '') +
+      cont(borr.length, 'Sin terminar', '');
+
+    var h = '';
+    h += bt('verTareas(\'pendientes\')', 'Tareas de hoy', pend.length, pend.length ? '' : 'claro');
+    if(semana.length > pend.length)
+      h += bt('verTareas(\'semana\')', 'Toda la semana', semana.length, 'claro');
+    if(venc.length) h += bt('verTareas(\'vencidas\')', 'Vencidas', venc.length, 'claro');
+    if(borr.length) h += bt('verBorradores()', 'Sin terminar', borr.length, 'claro');
+    if(evals) h += bt('verEvaluacion()', 'Evaluación de la semana', evals, 'claro');
+    h += bt('verExtra()', 'Registrar trabajo extraordinario', '', 'claro');
+    h += bt('verAjustes()', 'Mi cuenta', '', 'claro');
+    $('botonera').innerHTML = h;
+  });
+  pintarAusenciaInicio();
+  pintarSenal();
+}
+
+function cont(n, t, cls){
+  return '<div class="cont '+cls+'"><b>'+n+'</b><span>'+t+'</span></div>';
+}
+function bt(fn, txt, n, cls){
+  return '<button class="bton '+(cls||'')+'" onclick="'+fn+'">'+esc(txt)+
+         (n !== '' && n !== undefined ? '<span class="n">'+n+'</span>' : '')+'</button>';
+}
+
+/* =====================================================================
+   LISTA DE TAREAS
+   ===================================================================== */
+var FILTRO = 'TODOS', MODO = 'pendientes', LISTA = [];
+
+function verTareas(modo){
+  MODO = modo || 'pendientes';
+  FILTRO = 'TODOS';
+  ir('pTareas', MODO === 'vencidas' ? 'Vencidas'
+              : MODO === 'semana' ? 'Toda la semana' : 'Tareas de hoy');
+  recolectar(MODO).then(function(l){ LISTA = l; pintarLista(); });
+}
+
+function pintarLista(){
+  var rubros = {};
+  LISTA.forEach(function(t){ rubros[t.rubro] = (rubros[t.rubro]||0) + 1; });
+
+  var f = '<button class="'+(FILTRO==='TODOS'?'on':'')+'" onclick="filtrar(\'TODOS\')">Todo ('+LISTA.length+')</button>';
+  Object.keys(rubros).sort().forEach(function(r){
+    f += '<button class="'+(FILTRO===r?'on':'')+'" onclick="filtrar(\''+r.replace(/'/g,"\\'")+'\')">'+
+         esc(r.charAt(0)+r.slice(1).toLowerCase())+' ('+rubros[r]+')</button>';
+  });
+  $('filtros').innerHTML = f;
+
+  var ver = LISTA.filter(function(t){ return FILTRO === 'TODOS' || t.rubro === FILTRO; });
+  if(!ver.length){
+    $('listaTareas').innerHTML = '<div class="vacio"><b>Nada pendiente acá</b>'+
+      (MODO==='vencidas' ? 'No tenés tareas vencidas.'
+       : MODO==='semana' ? 'Terminaste todo lo de esta semana.'
+       : 'Terminaste lo de hoy. Si querés adelantar, mirá "Toda la semana".')+'</div>';
+    return;
+  }
+
+  var h = '<div class="lista">';
+  ver.forEach(function(t){
+    var idx = LISTA.indexOf(t);
+    h += '<button class="item" onclick="abrirTarea('+idx+')">'+
+         '<div class="eq"><code>'+esc(t._codigo)+'</code> · '+esc(t.tipoEquipo)+
+         (t.componente ? ' · '+esc(t.componente) : '')+'</div>'+
+         '<div class="tx">'+esc(recorte(t.descripcion, 105))+'</div><div class="marcas">'+
+         (t.vencida ? '<span class="etiq al">'+t.diasVencida+' días vencida</span>' : '')+
+         (t.urgente ? '<span class="etiq am">Hoy sí o sí</span>' : '')+
+         (t.atrasadaSemana && !t.vencida && !t.urgente
+            ? '<span class="etiq am">Era para el '+dia(t.diaAsignado)+'</span>' : '')+
+         (MODO === 'semana' && !t.disponibleHoy
+            ? '<span class="etiq gr">'+dia(t.diaAsignado)+'</span>' : '')+
+         (t.tipoActividad === 'NORMA' ? '<span class="etiq gr">Norma</span>' :
+          t.tipoActividad === 'INSPECCION' ? '<span class="etiq gr">Inspección</span>' : '')+
+         (t.prioridad === 'ALTA' ? '<span class="etiq al">Prioridad alta</span>' : '')+
+         (String(t.frecuencia).toUpperCase() === 'DIARIA' ? '<span class="etiq am">Todos los días</span>' : '')+
+         '</div></button>';
+  });
+  $('listaTareas').innerHTML = h + '</div>';
+}
+function filtrar(r){ FILTRO = r; pintarLista(); }
+function recorte(s, n){ s = String(s); return s.length > n ? s.substring(0,n) + '…' : s; }
+
+/* =====================================================================
+   EJECUTAR UNA TAREA
+   ===================================================================== */
+var ACTUAL = null, BORRADOR = null;
+
+function abrirTarea(indice, borrador){
+  ACTUAL = borrador ? borrador.tarea : LISTA[indice];
+  BORRADOR = borrador || null;
+  ir('pDetalle', ACTUAL.tipoEquipo);
+
+  var res = borrador ? borrador.resultado : '';
+  var obs = borrador ? borrador.observacion : '';
+  var esNorma = ACTUAL.tipoActividad === 'NORMA';
+  var esInsp = ACTUAL.tipoActividad === 'INSPECCION';
+
+  var ops = esNorma
+    ? [['CUMPLE','Cumple','bueno'], ['NO_CUMPLE','No cumple','malo'],
+       ['NO_APLICA','No aplica en este local','']]
+    : (esInsp
+      ? [['OK','Sin novedad','bueno'], ['OK_CON_OBSERVACION','Con observación',''],
+         ['DEFECTO','Encontré un problema','malo'], ['NO_ACCESIBLE','No pude acceder','']]
+      : [['OK','Hecha, sin novedad','bueno'], ['OK_CON_OBSERVACION','Hecha, con observación',''],
+         ['DEFECTO','Hecha, encontré un problema','malo'], ['NO_ACCESIBLE','No pude hacerla','']]);
+
+  var h = '<div class="ficha">'+
+    '<div class="eq">'+esc(ACTUAL._localNombre)+' · '+esc(ACTUAL.sector)+'</div>'+
+    '<div class="tx">'+esc(ACTUAL.descripcion)+'</div><div class="marcas">'+
+    '<span class="etiq gr">'+esc(ACTUAL.frecuencia)+'</span>'+
+    (ACTUAL.diaAsignado ? '<span class="etiq gr">'+dia(ACTUAL.diaAsignado)+'</span>' : '')+
+    (ACTUAL.vencida ? '<span class="etiq al">Vencida</span>' : '')+
+    (ACTUAL.prioridad === 'ALTA' ? '<span class="etiq al">Prioridad alta</span>' : '')+
+    '</div></div>';
+
+  if(ACTUAL.generaAviso){
+    h += '<div class="alerta"><b>Si encontrás algo raro, avisá</b>'+
+         'Esta tarea es de las que hay que informar a Mantenimiento Central cuando aparece una anomalía.</div>';
+  }
+
+  h += '<p class="pregunta">¿Cómo salió?</p><div class="opciones">';
+  ops.forEach(function(o){
+    h += '<button class="op '+(res===o[0]?'on '+o[2]:'')+'" data-r="'+o[0]+'" '+
+         'onclick="elegir(this)">'+o[1]+'</button>';
+  });
+  h += '</div>';
+
+  /* La caja de texto aparece solo con los resultados que piden contar algo
+     (ver pideObservacion). Así nadie escribe "todo ok" en una tarea sin novedad. */
+  h += '<div class="notas'+(pideObservacion(res)?'':' oculta')+'" id="cajaObs">'+
+       '<label for="obsTxt" id="obsEtiq">'+etiquetaObservacion(res)+'</label>'+
+       '<textarea id="obsTxt" rows="3" placeholder="Se detecta pérdida de agua en la conexión inferior"'+
+       ' oninput="guardarBorrador()">'+esc(obs)+'</textarea></div>';
+
+  h += '<button class="bton centro" onclick="registrar(this)">Guardar</button>';
+  if(BORRADOR) h += '<button class="bton claro centro" onclick="tirarBorrador()">Descartar lo empezado</button>';
+
+  $('pDetalle').innerHTML = h;
+}
+
+/* Resultados que piden contar qué pasó: con ellos aparece la caja de texto,
+   y escribir es obligatorio. Con cualquier otro, la caja no se ve. */
+var CON_OBSERVACION = ['OK_CON_OBSERVACION', 'DEFECTO', 'NO_CUMPLE'];
+function pideObservacion(r){ return CON_OBSERVACION.indexOf(r) !== -1; }
+function etiquetaObservacion(r){
+  return r === 'OK_CON_OBSERVACION' ? 'Contá qué observaste' : 'Contá qué encontraste';
+}
+
+function elegir(b){
+  Array.prototype.forEach.call(b.parentNode.children, function(x){
+    x.className = 'op';
+  });
+  var r = b.getAttribute('data-r');
+  var cls = (r === 'OK' || r === 'CUMPLE') ? ' bueno'
+          : (r === 'DEFECTO' || r === 'NO_CUMPLE') ? ' malo' : '';
+  b.className = 'op on' + cls;
+  mostrarCajaObservacion(r);
+  guardarBorrador();
+}
+
+/* Muestra u oculta la caja según el resultado. Si se oculta, lo escrito
+   queda guardado por si el técnico vuelve a esa opción, pero no se envía. */
+function mostrarCajaObservacion(r){
+  var caja = $('cajaObs');
+  if(!caja) return;
+  var ver = pideObservacion(r);
+  var estaba = !caja.classList.contains('oculta');
+  caja.classList.toggle('oculta', !ver);
+  $('obsEtiq').textContent = etiquetaObservacion(r);
+  if(ver && !estaba) $('obsTxt').focus();
+}
+
+function resultadoElegido(){
+  var s = $('pDetalle').querySelector('.op.on');
+  return s ? s.getAttribute('data-r') : '';
+}
+
+/* Los borradores viven solo en el teléfono. Nunca se sincronizan:
+   así no puede quedar un borrador huérfano en el servidor. */
+function guardarBorrador(){
+  if(!ACTUAL) return;
+  var id = BORRADOR ? BORRADOR.id : (ACTUAL._local + '|' + ACTUAL.idTarea);
+  BORRADOR = {
+    id: id, tarea: ACTUAL,
+    resultado: resultadoElegido(),
+    observacion: ($('obsTxt') ? $('obsTxt').value : ''),
+    actualizado: new Date().toISOString()
+  };
+  if(!BORRADOR.resultado && !BORRADOR.observacion) return;
+  guardar('borradores', BORRADOR);
+}
+
+function tirarBorrador(){
+  if(!BORRADOR) return;
+  if(!confirm('Se borra lo que empezaste en esta tarea. La tarea vuelve a quedar pendiente. ¿Seguimos?')) return;
+  borrar('borradores', BORRADOR.id).then(function(){
+    BORRADOR = null; avisar('Borrador descartado'); verInicio();
+  });
+}
+
+function registrar(btn){
+  var r = resultadoElegido();
+  if(!r){ avisar('Elegí cómo salió la tarea', true); return; }
+  // la caja solo cuenta si está a la vista: con otro resultado no se envía nada
+  var obs = pideObservacion(r) ? $('obsTxt').value.trim() : '';
+  if(pideObservacion(r) && !obs){
+    avisar(r === 'OK_CON_OBSERVACION' ? 'Contá qué observaste antes de guardar'
+                                      : 'Contá qué encontraste: sin eso nadie puede resolverlo', true);
+    $('obsTxt').focus();
+    return;
+  }
+  if(!empezarGuardado(btn)) return;           // segundo toque: no hace nada
+
+  var tarea = ACTUAL;
+  yaGuardadoRecien('ejecuciones', function(x){
+    return x.idLocal === tarea._local && x.idTarea === tarea.idTarea && x.resultado === r;
+  }).then(function(repetida){
+    if(repetida){
+      terminarGuardado(btn);
+      avisar('Esta tarea ya quedó guardada hace un momento.');
+      verInicio();
+      return;
+    }
+    guardarTarea(tarea, r, obs, btn);
+  });
+}
+
+function guardarTarea(ACTUAL, r, obs, btn){
+  var id = uuid();
+  var eje = {
+    id: id, tipo:'PREVENTIVA', idTarea: ACTUAL.idTarea, idLocal: ACTUAL._local,
+    idTipoEquipo: ACTUAL.tipoEquipo, sector: ACTUAL.sector,
+    fechaProgramada: ACTUAL.fechaProgramada, fin: new Date().toISOString(),
+    estado:'COMPLETADA', resultado: r, observacion: obs,
+    requiereCorrectivo: (r === 'DEFECTO' || r === 'NO_CUMPLE'),
+    versionApp: VERSION_APP, _sync: 0,
+    // solo para mostrar en el teléfono; lo que empieza con _ no se envía
+    _localNombre: ACTUAL._localNombre,
+    _que: ACTUAL.tipoEquipo + (ACTUAL.componente ? ' · ' + ACTUAL.componente : '')
+  };
+
+  var acciones = [guardar('ejecuciones', eje)];
+
+  if(obs){
+    acciones.push(guardar('observaciones', {
+      id: uuid(), idEjecucion: id, idLocal: ACTUAL._local, idTipoEquipo: ACTUAL.tipoEquipo,
+      fecha: ACTUAL.fechaProgramada, texto: obs,
+      gravedad: (r === 'DEFECTO' || r === 'NO_CUMPLE') ? 'ALTA' : 'MEDIA', _sync: 0,
+      _localNombre: ACTUAL._localNombre
+    }));
+  }
+  if(BORRADOR) acciones.push(borrar('borradores', BORRADOR.id));
+
+  Promise.all(acciones).then(function(){
+    BORRADOR = null;
+    terminarGuardado(btn);
+    despuesDeGuardar(hayInternet() ? 'Tarea registrada' : 'Guardada. Se envía cuando haya señal.');
+  }).catch(function(e){
+    terminarGuardado(btn);
+    avisar('No se pudo guardar en el teléfono: ' + e.message, true);
+  });
+}
+
+/* =====================================================================
+   BORRADORES
+   ===================================================================== */
+function verBorradores(){
+  ir('pTareas', 'Sin terminar');
+  $('filtros').innerHTML = '';
+  todos('borradores').then(function(b){
+    if(!b.length){
+      $('listaTareas').innerHTML = '<div class="vacio"><b>No hay nada a medio hacer</b>'+
+        'Cuando empieces una tarea y no la termines, aparece acá.</div>';
+      return;
+    }
+    var h = '<p class="nota">Estas tareas quedaron empezadas. Podés seguir donde las dejaste.</p><div class="lista">';
+    b.forEach(function(x, i){
+      h += '<button class="item" onclick="seguirBorrador('+i+')">'+
+           '<div class="eq">'+esc(x.tarea._codigo || '')+' · '+esc(x.tarea.tipoEquipo)+'</div>'+
+           '<div class="tx">'+esc(recorte(x.tarea.descripcion, 90))+'</div>'+
+           '<div class="marcas"><span class="etiq am">Sin terminar</span></div></button>';
+    });
+    $('listaTareas').innerHTML = h + '</div>';
+    window._borr = b;
+  });
+}
+function seguirBorrador(i){ abrirTarea(null, window._borr[i]); }
+
+/* =====================================================================
+   EVALUACIÓN SEMANAL
+   ===================================================================== */
+var EVAL_PUNTAJES = {};
+
+function verEvaluacion(){
+  ir('pEvaluar', 'Evaluación de la semana');
+  EVAL_PUNTAJES = {};
+  var etiquetas = ['Muy deficiente','Deficiente','Regular','Bueno','Excelente'];
+
+  var h = '<p class="nota">Una sola nota por grupo de equipos, pensando en cómo está el conjunto '+
+          'esta semana. No es por cada máquina.</p>';
+  var hay = false;
+
+  evaluacionesPendientes().then(function(pend){
+    pend.forEach(function(par){
+      var b = par.b, g = par.g;
+      hay = true;
+      var k = b.idLocal + '::' + g;
+      h += '<div class="ficha"><div class="eq">'+esc(b.local)+'</div>'+
+           '<div class="tx" style="font-weight:500;margin-bottom:12px">'+esc(g)+'</div>'+
+           '<div class="puntajes">';
+      for(var p=1; p<=5; p++){
+        h += '<button class="pt" data-k="'+esc(k)+'" data-p="'+p+'" onclick="puntuar(this)">'+
+             '<b>'+p+'</b><span>'+etiquetas[p-1]+'</span></button>';
+      }
+      h += '</div><textarea id="ev_'+esc(k)+'" rows="2" placeholder="Comentario (opcional)"></textarea></div>';
+    });
+
+    if(!hay){
+      $('pEvaluar').innerHTML = '<div class="vacio"><b>Ya está evaluada la semana</b>'+
+        'Vuelve a pedirse la semana que viene.</div>';
+      return;
+    }
+    h += '<button class="bton centro" onclick="guardarEvaluacion(this)">Guardar evaluación</button>';
+    $('pEvaluar').innerHTML = h;
+  });
+}
+
+/* Grupos que faltan evaluar esta semana: lo que pide el servidor, menos lo
+   que el técnico ya guardó en el teléfono y todavía no se sincronizó. Sin
+   esto, la misma evaluación se podía cargar dos veces. */
+function evaluacionesPendientes(){
+  return todos('evaluaciones').then(function(hechas){
+    var out = [];
+    bloques().forEach(function(b){
+      var v = b.ventana || {};
+      (b.evaluacionesPendientes||[]).forEach(function(g){
+        var ya = hechas.some(function(x){
+          return x.idLocal === b.idLocal && x.grupo === g &&
+                 (!v.desde || (x.fecha >= v.desde && x.fecha <= v.hasta));
+        });
+        if(!ya) out.push({b:b, g:g});
+      });
+    });
+    return out;
+  });
+}
+
+function puntuar(b){
+  var k = b.getAttribute('data-k');
+  Array.prototype.forEach.call(b.parentNode.children, function(x){ x.className = 'pt'; });
+  b.className = 'pt on';
+  EVAL_PUNTAJES[k] = Number(b.getAttribute('data-p'));
+}
+
+function guardarEvaluacion(btn){
+  var claves = Object.keys(EVAL_PUNTAJES);
+  if(!claves.length){ avisar('Poné al menos una nota', true); return; }
+  if(!empezarGuardado(btn)) return;
+
+  var acciones = claves.map(function(k){
+    var p = k.split('::');
+    var c = $('ev_' + k);
+    return guardar('evaluaciones', {
+      id: uuid(), idLocal: p[0], grupo: p[1], fecha: hoyTexto(),
+      puntaje: EVAL_PUNTAJES[k], observacion: c ? c.value.trim() : '', _sync: 0
+    });
+  });
+
+  Promise.all(acciones).then(function(){
+    terminarGuardado(btn);
+    despuesDeGuardar(claves.length === 1 ? '1 evaluación guardada' : claves.length + ' evaluaciones guardadas');
+  }).catch(function(e){
+    terminarGuardado(btn);
+    avisar('No se pudo guardar en el teléfono: ' + e.message, true);
+  });
+}
+
+/* =====================================================================
+   TRABAJO EXTRAORDINARIO
+   ===================================================================== */
+function verExtra(){
+  ir('pExtra', 'Trabajo extraordinario');
+  var op = '';
+  bloques().forEach(function(b){
+    op += '<option value="'+esc(b.idLocal)+'">'+esc(b.codigo)+' — '+esc(b.local)+'</option>';
+  });
+  $('exLocal').innerHTML = op;
+}
+
+function guardarExtra(btn){
+  var local = $('exLocal').value, rubro = $('exRubro').value, t = $('exTitulo').value.trim();
+  if(!local){ avisar('No tenés locales asignados. Sincronizá o consultá con tu supervisor.', true); return; }
+  if(!rubro){ avisar('Elegí el rubro del trabajo', true); $('exRubro').focus(); return; }
+  if(!t){ avisar('Contá qué pasó', true); return; }
+  if(!empezarGuardado(btn)) return;
+
+  yaGuardadoRecien('ejecuciones', function(x){
+    return x.tipo === 'EXTRAORDINARIA' && x.idLocal === local && textoNormal(x.titulo) === textoNormal(t);
+  }).then(function(repetido){
+    if(repetido){
+      terminarGuardado(btn);
+      avisar('Este trabajo ya quedó guardado hace un momento.');
+      verInicio();
+      return;
+    }
+    return guardar('ejecuciones', {
+      id: uuid(), tipo:'EXTRAORDINARIA', idLocal: local, rubro: rubro,
+      sector: $('exEquipo').value.trim(), fechaProgramada: hoyTexto(),
+      fin: new Date().toISOString(), estado:'COMPLETADA', resultado:'OK',
+      titulo: t, descripcionTrabajo: $('exDesc').value.trim(),
+      versionApp: VERSION_APP, _sync: 0,
+      _localNombre: (bloques().filter(function(b){ return b.idLocal === local; })[0] || {}).local || ''
+    }).then(function(){
+      $('exTitulo').value = ''; $('exDesc').value = ''; $('exEquipo').value = ''; $('exRubro').value = '';
+      terminarGuardado(btn);
+      despuesDeGuardar(hayInternet() ? 'Trabajo registrado' : 'Guardado. Se envía cuando haya señal.');
+    });
+  }).catch(function(e){
+    terminarGuardado(btn);
+    avisar('No se pudo guardar en el teléfono: ' + e.message, true);
+  });
+}
+
+/* =====================================================================
+   AUSENCIAS (1.6)
+   El técnico avisa vacaciones, reposo o permisos. Un supervisor o un
+   administrador lo aprueba. Mientras está pendiente no cambia nada.
+   Aprobada, el servidor no le manda tareas esos días. Avisar, cancelar y
+   "Volví antes" necesitan señal: el servidor valida en el momento (fechas,
+   superposiciones) y no tiene sentido dejarlo en cola.
+   ===================================================================== */
+var TIPOS_AUSENCIA = [['VACACIONES','Vacaciones'],['REPOSO','Reposo'],['PERMISO','Permiso'],['OTRO','Otro motivo']];
+var DIAS_ATRAS_AUSENCIA = 7;
+
+function misAvisos(){ return (ESTADO.hoy && ESTADO.hoy.ausencias) ? ESTADO.hoy.ausencias : []; }
+
+function sumarDias(t, n){
+  var p = String(t).split('-'), d = new Date(+p[0], +p[1]-1, +p[2] + n);
+  return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+}
+function fechaDia(t){      /* "2026-11-20" → "viernes 20/11" */
+  var p = String(t).split('-'); if(p.length !== 3) return String(t||'');
+  var d = new Date(+p[0], +p[1]-1, +p[2]);
+  return ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'][d.getDay()]+' '+p[2]+'/'+p[1];
+}
+function rangoAus(a){
+  return a.desde === a.hasta ? 'el ' + fechaDia(a.desde) : 'del ' + fechaCorta(a.desde) + ' al ' + fechaDia(a.hasta);
+}
+function tipoMin(a){ return String(a.tipoTexto || '').toLowerCase(); }
+
+/* En el inicio: si hoy está ausente, un cartel con "Volví antes"; si no,
+   avisos cortos de lo pendiente, lo aprobado que viene y lo rechazado. */
+function pintarAusenciaInicio(){
+  var caja = $('ausInicio'); if(!caja) return;
+  var hoy = ESTADO.hoy && ESTADO.hoy.ausenciaHoy;
+  var h = '';
+  if(hoy){
+    h += '<div class="ausHoy"><b>Estás de '+esc(tipoMin(hoy) === 'otro motivo' ? 'ausencia' : tipoMin(hoy))+
+         ' hasta el '+esc(fechaDia(hoy.hasta))+'</b>'+
+         '<p>Mientras tanto no tenés tareas asignadas, y esas semanas no te quedan vencidas.</p>'+
+         '<button class="bton chico" onclick="volviAntesDesdeInicio(\''+esc(hoy.id)+'\')">Volví antes</button></div>';
+  }
+  misAvisos().forEach(function(a){
+    if(hoy && a.id === hoy.id) return;
+    if(a.estado === 'PENDIENTE'){
+      h += '<div class="ausNota esp">Tu aviso de '+esc(tipoMin(a))+' '+esc(rangoAus(a))+' <b>espera aprobación</b>.</div>';
+    } else if(a.estado === 'APROBADA' && !a.enCurso){
+      h += '<div class="ausNota ok"><b>Ausencia aprobada</b>: '+esc(tipoMin(a))+' '+esc(rangoAus(a))+'.</div>';
+    } else if(a.estado === 'RECHAZADA' || a.estado === 'ANULADA'){
+      h += '<div class="ausNota mal">Tu aviso de '+esc(tipoMin(a))+' '+esc(rangoAus(a))+' fue <b>'+
+           (a.estado === 'RECHAZADA' ? 'rechazado' : 'anulado')+'</b>'+
+           (a.comentario ? ': '+esc(a.comentario) : '')+'.</div>';
+    }
+  });
+  caja.innerHTML = h;
+}
+
+function verAusencias(){
+  ir('pAusencias', 'Ausencias');
+  var h = '';
+  TIPOS_AUSENCIA.forEach(function(t){
+    h += '<button class="op" data-t="'+t[0]+'" onclick="elegirTipoAusencia(this)">'+esc(t[1])+'</button>';
+  });
+  $('ausTipos').innerHTML = h;
+  var hoy = hoyTexto();
+  $('ausDesde').value = ''; $('ausHasta').value = '';
+  $('ausDesde').min = sumarDias(hoy, -DIAS_ATRAS_AUSENCIA); $('ausHasta').min = sumarDias(hoy, -DIAS_ATRAS_AUSENCIA);
+  pintarMisAvisos();
+  // con señal, se trae lo último (por si el supervisor ya respondió)
+  if(hayInternet() && ESTADO.token){
+    llamar('misAusencias', {}).then(function(r){ guardarMisAvisos(r.ausencias); }).catch(function(){});
+  }
+}
+
+function guardarMisAvisos(lista){
+  if(!ESTADO.hoy) ESTADO.hoy = {locales: []};
+  ESTADO.hoy.ausencias = lista || [];
+  ponerClave('hoy', ESTADO.hoy);
+  if($('pAusencias').className.indexOf(' on') !== -1) pintarMisAvisos();
+}
+
+var NOMBRE_ESTADO_AUS = {PENDIENTE:'Espera aprobación', APROBADA:'Aprobada', RECHAZADA:'Rechazada', ANULADA:'Anulada'};
+
+function pintarMisAvisos(){
+  var l = misAvisos();
+  if(!l.length){ $('ausLista').innerHTML = ''; return; }
+  var h = '<h2 class="tit2">Tus avisos</h2>';
+  l.forEach(function(a){
+    var est = a.enCurso ? 'En curso' : (NOMBRE_ESTADO_AUS[a.estado] || a.estado);
+    var cls = a.estado === 'PENDIENTE' ? 'am' : (a.estado === 'APROBADA' ? 'ok' : 'al');
+    h += '<div class="ficha"><div class="eq">'+esc(a.tipoTexto)+'</div>'+
+         '<div class="tx">'+esc(rangoAus(a))+'</div>'+
+         '<div class="marcas"><span class="etiq '+cls+'">'+esc(est)+'</span>'+
+         '<span class="etiq gr">'+a.dias+(a.dias === 1 ? ' día' : ' días')+'</span></div>'+
+         (a.comentario && (a.estado === 'RECHAZADA' || a.estado === 'ANULADA')
+           ? '<p class="nota" style="margin:10px 0 0">'+esc(a.comentario)+'</p>' : '');
+    if(a.puedeCancelar || a.puedeVolver){
+      h += '<div class="aviso2">'+
+           (a.puedeVolver ? '<button class="bton chico" onclick="volviAntesAus(\''+esc(a.id)+'\', this)">Volví antes</button>' : '')+
+           (a.puedeCancelar ? '<button class="bton claro chico" onclick="cancelarAus(\''+esc(a.id)+'\', this)">Cancelar aviso</button>' : '')+
+           '</div>';
+    }
+    h += '</div>';
+  });
+  $('ausLista').innerHTML = h;
+}
+
+function elegirTipoAusencia(b){
+  Array.prototype.forEach.call(b.parentNode.children, function(x){ x.className = 'op'; });
+  b.className = 'op on';
+}
+
+function atajoAusencia(cual){
+  var hoy = hoyTexto();
+  if(cual === 'HOY'){ $('ausDesde').value = hoy; if(!$('ausHasta').value || $('ausHasta').value < hoy) $('ausHasta').value = ''; $('ausHasta').focus(); }
+  else { $('ausDesde').value = sumarDias(hoy, -3); $('ausHasta').value = sumarDias(hoy, -1); }
+}
+
+function enviarAusencia(btn){
+  var s = $('ausTipos').querySelector('.op.on');
+  var d = {tipo: s ? s.getAttribute('data-t') : '', desde: $('ausDesde').value, hasta: $('ausHasta').value};
+  if(!d.tipo){ avisar('Elegí el tipo de ausencia', true); return; }
+  if(!d.desde || !d.hasta){ avisar('Completá las dos fechas', true); return; }
+  if(d.hasta < d.desde){ avisar('La fecha "Hasta" no puede ser anterior a "Desde"', true); return; }
+  if(d.desde < sumarDias(hoyTexto(), -DIAS_ATRAS_AUSENCIA)){
+    avisar('Solo se puede avisar hasta '+DIAS_ATRAS_AUSENCIA+' días hacia atrás. Pedile a tu supervisor que la cargue.', true); return;
+  }
+  if(!hayInternet()){ avisar('Para avisar una ausencia hace falta señal', true); return; }
+  if(!empezarGuardado(btn)) return;
+  llamar('pedirAusencia', d).then(function(r){
+    terminarGuardado(btn);
+    guardarMisAvisos(r.ausencias);
+    $('ausDesde').value = ''; $('ausHasta').value = '';
+    Array.prototype.forEach.call($('ausTipos').children, function(x){ x.className = 'op'; });
+    avisar('Aviso enviado. Queda esperando aprobación.');
+    window.scrollTo(0, 0);
+  }).catch(function(e){
+    terminarGuardado(btn);
+    avisar(e.message, true);
+  });
+}
+
+function cancelarAus(id, btn){
+  if(!hayInternet()){ avisar('Para cancelar hace falta señal', true); return; }
+  if(!confirm('Se cancela el aviso. ¿Seguimos?')) return;
+  if(!empezarGuardado(btn)) return;
+  llamar('cancelarAusencia', {id:id}).then(function(r){
+    terminarGuardado(btn);
+    guardarMisAvisos(r.ausencias);
+    avisar('Aviso cancelado');
+  }).catch(function(e){ terminarGuardado(btn); avisar(e.message, true); });
+}
+
+/* "Volví antes": la ausencia termina ayer y hoy ya se trabaja. Se trae el
+   trabajo del día enseguida, para que las tareas aparezcan. */
+function volviAntes(id, btn){
+  if(!hayInternet()){ avisar('Para avisar que volviste hace falta señal', true); return Promise.resolve(false); }
+  if(!confirm('Tu ausencia termina ayer y desde hoy vuelven tus tareas. ¿Seguimos?')) return Promise.resolve(false);
+  if(!empezarGuardado(btn)) return Promise.resolve(false);
+  return llamar('volviAntes', {id:id}).then(function(r){
+    guardarMisAvisos(r.ausencias);
+    return sincronizar(false);
+  }).then(function(){
+    terminarGuardado(btn);
+    avisar('¡Bienvenido de vuelta! Ya tenés tus tareas.');
+    return true;
+  }).catch(function(e){ terminarGuardado(btn); avisar(e.message, true); return false; });
+}
+function volviAntesAus(id, btn){ volviAntes(id, btn).then(function(ok){ if(ok) pintarMisAvisos(); }); }
+function volviAntesDesdeInicio(id){
+  var b = $('ausInicio').querySelector('button');
+  volviAntes(id, b).then(function(ok){ if(ok) verInicio(); });
+}
+
+/* =====================================================================
+   AJUSTES
+   ===================================================================== */
+function verAjustes(){
+  ir('pAjustes', 'Mi cuenta');
+  var u = ESTADO.usuario || {};
+  $('ajQuien').textContent = (u.nombre||'') + ' ' + (u.apellido||'');
+  var s = ESTADO.ultimaSync
+    ? 'Última sincronización: ' + new Date(ESTADO.ultimaSync).toLocaleString('es')
+    : 'Todavía no sincronizaste';
+  if(ESTADO.cola > 0) s += ' · ' + ESTADO.cola + ' registros esperando señal';
+  $('ajSync').textContent = s;
+
+  var e = ESTADO.errorSync;
+  $('ajError').style.display = e ? 'block' : 'none';
+  if(e) $('ajErrorTx').textContent = new Date(e.cuando).toLocaleString('es') + ' · ' + e.mensaje;
+
+  enRevision().then(function(l){
+    $('ajRev').style.display = l.length ? 'block' : 'none';
+    if(!l.length) return;
+    $('ajRevN').textContent = l.length === 1 ? '1 registro' : l.length + ' registros';
+    var locales = {};
+    bloques().forEach(function(b){ locales[b.idLocal] = b.local; });
+    var h = '';
+    l.slice(0, 8).forEach(function(x){
+      var que = x._que || x.titulo || (x.idTarea ? 'Tarea ' + x.idTarea
+              : (x.grupo ? 'Evaluación ' + x.grupo : 'Observación: ' + recorte(x.texto || '', 40)));
+      h += '<li>' + esc(que) + ' · ' + esc(x._localNombre || locales[x.idLocal] || x.idLocal || 'sin local') +
+           ' · ' + esc(fechaCorta(x.fechaProgramada || x.fecha || '')) + '</li>';
+    });
+    if(l.length > 8) h += '<li>y ' + (l.length - 8) + ' más</li>';
+    $('ajRevLista').innerHTML = h;
+  });
+}
+
+/* =====================================================================
+   INSTALACIÓN Y ARRANQUE
+   ===================================================================== */
+var promptInstalar = null;
+window.addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault(); promptInstalar = e;
+  if(ESTADO.token) $('instalar').style.display = 'block';
+});
+function instalar(){
+  if(!promptInstalar){
+    avisar('En el menú del navegador buscá "Instalar aplicación"');
+    return;
+  }
+  promptInstalar.prompt();
+  promptInstalar.userChoice.then(function(){
+    promptInstalar = null; $('instalar').style.display = 'none';
+  });
+}
+
+/* Al volver la señal se sincroniza. Solo se repinta el inicio si el técnico
+   está ahí: antes lo sacaba de la pantalla en la que estuviera (por ejemplo,
+   a mitad de una tarea o de un aviso de ausencia). */
+window.addEventListener('online', function(){
+  pintarSenal();
+  sincronizar(false).then(function(){ if(PILA[PILA.length-1] === 'pInicio') verInicio(); else pintarSenal(); });
+});
+window.addEventListener('offline', pintarSenal);
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  });
+}
+
+abrirBD().then(function(){
+  return Promise.all([verClave('token'), verClave('usuario'), verClave('hoy'), verClave('ultimaSync'),
+                      verClave('errorSync')]);
+}).then(function(r){
+  ESTADO.token = r[0]; ESTADO.usuario = r[1]; ESTADO.hoy = r[2]; ESTADO.ultimaSync = r[3];
+  ESTADO.errorSync = r[4] || null;
+  return contarCola();
+}).then(function(){
+  if(!ESTADO.token){ ir('pIngreso', 'Mantenimiento', false); PILA = ['pIngreso']; return; }
+  verInicio();
+  // Si hay señal, se pone al día en segundo plano sin trabar la pantalla.
+  if(hayInternet()) sincronizar(false).then(verInicio);
+}).catch(function(e){
+  avisar(e.message, true);
+});
+</script>
 </body>
 </html>
